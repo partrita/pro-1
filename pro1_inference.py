@@ -142,9 +142,9 @@ def run_inference(sequence, protein_data, model, tokenizer, stability_calculator
     # Store the base prompt for reuse
     base_prompt = f"""You are an expert protein engineer in rational protein design. You are working with a protein sequence given below, as well as other useful information regarding the enzyme/reaction (if applicable): 
 
-ENZYME NAME: {protein_data.get('name', 'Unknown')}
+PROTEIN NAME: {protein_data.get('name', 'Unknown')}
 EC NUMBER: {protein_data.get('ec_number', 'Unknown')}
-ENZYME SEQUENCE: {sequence}
+PROTEIN SEQUENCE: {sequence}
 SUBSTRATES: {', '.join(protein_data['reaction'][0]['substrates'])}
 PRODUCTS: {', '.join(protein_data['reaction'][0]['products'])}
 GENERAL INFORMATION: {protein_data.get('general_information', 'No additional information available')}
@@ -289,6 +289,7 @@ You are a helpful assistant that helps users with protein engineering tasks. You
                 "iteration": iteration + 1,
                 "sequence": modified_sequence,
                 "stability_score": stability_score,
+                "ddg": stability_score - original_stability_score,
                 "response": current_response,
             }
             
@@ -327,11 +328,16 @@ You are a helpful assistant that helps users with protein engineering tasks. You
         print(f"Sequence: {item['sequence'][:20]}... (length: {len(item['sequence'])})")
         print("-" * 50)
     
+    # Save top performers before returning
+    print(f"\nSaving top 10 performers to 'top_performers.json'...")
+    with open('top_performers.json', 'w') as f:
+        json.dump(top_performers, f, indent=2)
+    
     # Return the best sequence and response based on stability score
     if iteration_history: 
         best_iteration = min(iteration_history, key=lambda x: x['stability_score'])
         return best_iteration['stability_score'], best_iteration['sequence'], best_iteration['response']
-    return None, None, None 
+    return None, None, None
 
 # use this if you are extracting from uniprot mutagenesis data
 def parse_mutagenesis_data(json_file_path):
@@ -401,8 +407,8 @@ if __name__ == "__main__":
         }],
         
         # Important residues and cofactors
-        "metal_ions": [],  # List any metal ions or cofactors (e.g. ['Zn+2', 'Mg+2'])
-        "active_site_residues": [],  # example ["H64", "H19", "H198", "H200"]
+        "metal_ions": ['None'],  # List any metal ions or cofactors (e.g. ['Zn+2', 'Mg+2'])
+        "active_site_residues": ['None'],  # example ["H64", "H19", "H198", "H200"]
         
         # Additional information (can be left empty)
         "general_information": """
