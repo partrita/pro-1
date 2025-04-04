@@ -29,6 +29,8 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+from function.embed import create_embedder
+
 load_dotenv()
 
 NUM_EPOCHS = 5
@@ -432,7 +434,11 @@ def calculate_weighted_fmeasure(
     return weighted_f1, weighted_precision, weighted_recall
 
 def go_prediction_reward_func(prompts, completions, **kwargs):
-    """Reward function for GO term prediction using weighted F-measure"""
+    """
+    Reward function for GO term prediction using weighted F-measure and embedding similarity.
+    - Exact matches get maximum reward
+    - Non-exact matches get reward based on embedding similarity
+    """
     rewards = []
     
     # Load term weights if not already loaded
@@ -441,6 +447,13 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
         start_time = time.time()
         go_prediction_reward_func.term_weights = load_term_weights(TERM_WEIGHTS_PATH)
         print(f"Term weights loaded in {time.time() - start_time:.2f} seconds")
+    
+    # Load embedder if not already loaded
+    if not hasattr(go_prediction_reward_func, 'embedder'):
+        print("\nLoading GO term embeddings...")
+        start_time = time.time()
+        go_prediction_reward_func.embedder = create_embedder("function/cafa/Train/go-basic.obo")
+        print(f"GO term embeddings loaded in {time.time() - start_time:.2f} seconds")
     
     for i, (prompt, completion) in enumerate(zip(prompts, completions)):
         try:
@@ -470,7 +483,7 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                 true_terms = {term.strip(' "\'') for term in terms_str.split(',')}
             
             if aspect and true_terms:
-                # Calculate weighted F-measure
+                # Calculate standard weighted F-measure (for comparison)
                 weighted_f1, weighted_precision, weighted_recall = calculate_weighted_fmeasure(
                     predicted_terms,
                     true_terms,
@@ -478,8 +491,17 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                     aspect
                 )
                 
-                # Base reward on weighted F1 score
-                reward += GO_PREDICTION_REWARD * weighted_f1
+                # Calculate embedding-based similarity reward
+                embedding_reward = calculate_embedding_reward(
+                    predicted_terms, 
+                    true_terms, 
+                    go_prediction_reward_func.embedder,
+                    go_prediction_reward_func.term_weights,
+                    aspect
+                )
+                
+                # Base reward on embedding similarity score
+                reward += GO_PREDICTION_REWARD * embedding_reward
                 
                 # Additional reward for properly formatted output
                 if re.search(r'\\boxed{([^}]+)}', completion):
@@ -490,7 +512,8 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                 print(f"Aspect: {aspect}")
                 print(f"Predicted Terms: {predicted_terms}")
                 print(f"True Terms: {true_terms}")
-                print(f"Weighted F1: {weighted_f1:.4f}")
+                print(f"Traditional Weighted F1: {weighted_f1:.4f}")
+                print(f"Embedding-based Reward: {embedding_reward:.4f}")
                 print(f"Total Reward: {reward:.4f}")
                 print("\nThinking excerpt (first 200 chars):")
                 print(thinking[:200] + "...")
@@ -504,6 +527,7 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                     f"reward/completion_{i}/weighted_precision": weighted_precision,
                     f"reward/completion_{i}/weighted_recall": weighted_recall,
                     f"reward/completion_{i}/weighted_f1": weighted_f1,
+                    f"reward/completion_{i}/embedding_reward": embedding_reward,
                     f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
                     f"reward/completion_{i}/true_terms_count": len(true_terms),
                     f"reward/completion_{i}/thinking_length": thinking_length,
@@ -514,9 +538,105 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                         
         except Exception as e:
             print(f"Error calculating rewards: {e}")
+            import traceback
+            traceback.print_exc()
             rewards.append(0.0)
     
     return rewards
+
+def calculate_embedding_reward(predicted_terms: Set[str], 
+                              true_terms: Set[str], 
+                              embedder,
+                              term_weights: Dict[str, float],
+                              aspect: str) -> float:
+    """
+    Calculate reward based on embedding similarity between predicted and true GO terms.
+    - Exact matches get maximum reward (1.0)
+    - Non-exact matches get reward based on embedding similarity
+    - Handles mismatched number of terms
+    
+    Args:
+        predicted_terms: Set of predicted GO terms
+        true_terms: Set of ground truth GO terms
+        embedder: GOTermEmbedder instance with precomputed embeddings
+        term_weights: Dictionary mapping GO terms to their information accretion weights
+        aspect: Ontology aspect (MFO, BPO, CCO)
+        
+    Returns:
+        float: Embedding-based reward score (0.0 to 1.0)
+    """
+    if not predicted_terms or not true_terms:
+        return 0.0
+    
+    # Filter terms by aspect if weights are available
+    valid_predicted = {term for term in predicted_terms if term in term_weights}
+    valid_true = {term for term in true_terms if term in term_weights}
+    
+    if not valid_predicted or not valid_true:
+        return 0.0
+    
+    # Calculate precision component (for each predicted term)
+    precision_scores = []
+    precision_weights = []
+    
+    for pred_term in valid_predicted:
+        # Get weight for prediction
+        pred_weight = term_weights.get(pred_term, 1.0)
+        precision_weights.append(pred_weight)
+        
+        # If term is an exact match, give maximum score
+        if pred_term in valid_true:
+            precision_scores.append(1.0 * pred_weight)
+            continue
+        
+        # Otherwise, find closest true term by embedding similarity
+        max_similarity = 0.0
+        for true_term in valid_true:
+            similarity = embedder.compute_reward(pred_term, true_term)
+            max_similarity = max(max_similarity, similarity)
+        
+        precision_scores.append(max_similarity * pred_weight)
+    
+    # Calculate recall component (for each true term)
+    recall_scores = []
+    recall_weights = []
+    
+    for true_term in valid_true:
+        # Get weight for true term
+        true_weight = term_weights.get(true_term, 1.0)
+        recall_weights.append(true_weight)
+        
+        # If term is an exact match, give maximum score
+        if true_term in valid_predicted:
+            recall_scores.append(1.0 * true_weight)
+            continue
+        
+        # Otherwise, find closest predicted term by embedding similarity
+        max_similarity = 0.0
+        for pred_term in valid_predicted:
+            similarity = embedder.compute_reward(pred_term, true_term)
+            max_similarity = max(max_similarity, similarity)
+        
+        recall_scores.append(max_similarity * true_weight)
+    
+    # Calculate weighted precision and recall
+    if precision_weights and precision_scores:
+        weighted_precision = sum(precision_scores) / sum(precision_weights) if sum(precision_weights) > 0 else 0.0
+    else:
+        weighted_precision = 0.0
+        
+    if recall_weights and recall_scores:
+        weighted_recall = sum(recall_scores) / sum(recall_weights) if sum(recall_weights) > 0 else 0.0
+    else:
+        weighted_recall = 0.0
+    
+    # Calculate F1 score
+    if weighted_precision + weighted_recall > 0:
+        weighted_f1 = (2 * weighted_precision * weighted_recall) / (weighted_precision + weighted_recall)
+    else:
+        weighted_f1 = 0.0
+    
+    return weighted_f1
 
 class WandBLoggingCallback(TrainerCallback):
     def on_log(self, args, state, control, logs=None, **kwargs):
