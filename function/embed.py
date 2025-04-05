@@ -34,9 +34,30 @@ class GOTermEmbedder:
     
     def compute_embeddings(self, terms: Dict[str, str]) -> None:
         """Compute embeddings for all term definitions."""
-        for term_id, definition in terms.items():
+        import os
+        import pickle
+        from tqdm import tqdm
+        
+        # Define cache file path
+        cache_file = "go_term_embeddings.pkl"
+        
+        # Try to load from cache if exists
+        if os.path.exists(cache_file):
+            print("Loading embeddings from cache...")
+            with open(cache_file, 'rb') as f:
+                self.embeddings = pickle.load(f)
+            return
+            
+        # Compute embeddings if not cached
+        print("Computing embeddings (this may take a while)...")
+        for term_id, definition in tqdm(terms.items(), desc="Computing embeddings"):
             embedding = self.model.encode(definition)
             self.embeddings[term_id] = embedding
+            
+        # Save to cache
+        print("Saving embeddings to cache...")
+        with open(cache_file, 'wb') as f:
+            pickle.dump(self.embeddings, f)
             
     def load_from_obo(self, file_path: str) -> None:
         """Load and embed all terms from an OBO file."""
@@ -66,6 +87,7 @@ def create_embedder(obo_file_path: str) -> GOTermEmbedder:
     """Helper function to create and initialize an embedder."""
     embedder = GOTermEmbedder()
     embedder.load_from_obo(obo_file_path)
+    print(f"Loaded {len(embedder.embeddings)} term embeddings")
     return embedder
 
 if __name__ == "__main__":

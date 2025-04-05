@@ -149,28 +149,26 @@ def load_protein_annotations(train_terms_path: str) -> Dict[str, Dict[str, Dict[
             header = next(reader)  # Skip header row
             
             # Verify expected columns exist
-            expected_cols = ['protein_id', 'term_id', 'aspect', 'evidence']
+            expected_cols = ['protein_id', 'term_id', 'aspect']
             if len(header) < len(expected_cols):
                 raise ValueError(f"Missing columns in annotation file. Expected: {expected_cols}")
             
             for row in reader:
-                if len(row) < 4:
+                if len(row) < 3:
                     print(f"Warning: Skipping malformed row: {row}")
                     continue
                     
-                protein_id, term_id, aspect, evidence = row[:4]
+                protein_id, term_id, aspect = row[:3]
                 protein_id = protein_id.strip()
                 term_id = term_id.strip()
                 aspect = aspect.strip()
-                evidence = evidence.strip()
                 
                 # Skip if aspect is not one of the main three
                 if aspect not in protein_annotations:
                     continue
                 
                 # Determine if evidence is experimental
-                is_experimental = evidence in EXPERIMENTAL_EVIDENCE_CODES
-                annotation_type = 'experimental' if is_experimental else 'predicted'
+                annotation_type = 'experimental'
                 
                 # Initialize sets if needed
                 if protein_id not in protein_annotations[aspect][annotation_type]:
@@ -178,14 +176,6 @@ def load_protein_annotations(train_terms_path: str) -> Dict[str, Dict[str, Dict[
                 
                 # Add the term
                 protein_annotations[aspect][annotation_type][protein_id].add(term_id)
-        
-        # Print statistics
-        for aspect in protein_annotations:
-            exp_count = len(protein_annotations[aspect]['experimental'])
-            pred_count = len(protein_annotations[aspect]['predicted'])
-            print(f"{aspect} annotations:")
-            print(f"  Experimental: {exp_count} proteins")
-            print(f"  Predicted: {pred_count} proteins")
         
         return protein_annotations
         
@@ -246,7 +236,7 @@ def construct_prompt(
         if not terms:
             return f"  No experimentally validated {aspect_name} terms known"
         formatted = []
-        for term_id in sorted(terms)[:3]:  # Show up to 3 terms, sorted for consistency
+        for term_id in sorted(terms):
             term_info = go_terms.get(term_id, {})
             name = term_info.get('name', 'Unknown term')
             definition = term_info.get('def', '').split('"')[1] if 'def' in term_info else ''
@@ -273,7 +263,6 @@ def construct_prompt(
 
 Target Aspect: {target_aspect}
 
-PROTEIN INFORMATION:
 {protein_description}
 
 PROTEIN SEQUENCE:
@@ -303,7 +292,7 @@ Your final answer should include only the predicted GO term IDs in a comma-separ
 Example: \\boxed{{GO:0003674,GO:0005515,GO:0046872}}
 
 First, think through your reasoning process considering:
-1. Sequence features (length, composition, motifs)
+1. Sequence features (length, composition, motifs, similar sequences)
 2. Known annotations and their implications for {aspect_names[target_aspect]}
 3. Cellular context and biological roles
 4. Potential molecular mechanisms
@@ -311,7 +300,7 @@ First, think through your reasoning process considering:
 Then provide your predictions."""
 
     whole_prompt = f"""<|start_header_id|>system<|end_header_id|>
-You are a helpful assistant that helps users with protein function prediction. You first think about the reasoning process and then provide the answer. The reasoning process and answer should be enclosed within <think> </think> and <answer> </answer> tags respectively. Your thinking should be at least 3000 tokens. |eot_id|><|start_header_id|>user<|end_header_id|>
+You are a helpful assistant that helps users with protein function prediction. You first think about the reasoning process and then provide the answer. The reasoning process and answer should be enclosed within <think> </think> and <answer> </answer> tags respectively. Your thinking should be at least 3000 words. |eot_id|><|start_header_id|>user<|end_header_id|>
 {go_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
 
     return whole_prompt
@@ -320,7 +309,7 @@ def create_dataset(
     protein_sequences: Dict[str, str],
     protein_annotations: Dict[str, Dict[str, Dict[str, Set[str]]]],
     go_terms: Dict[str, Dict],
-    max_examples: int = 1000
+    max_examples: int = 10000
 ) -> List[Dict]:
     """
     Create dataset for training, handling each aspect separately.
@@ -349,6 +338,9 @@ def create_dataset(
         
         # Create records for proteins without experimental annotations in this aspect
         for protein_id in list(proteins_without_exp)[:max_examples // 3]:  # Limit per aspect
+            # Get all GO terms for this protein in this aspect
+            all_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
+            
             record = {
                 "prompt": construct_prompt(
                     protein_id,
@@ -358,9 +350,9 @@ def create_dataset(
                     target_aspect=aspect
                 ),
                 "protein_id": protein_id,
-                "aspect": aspect,
+                "aspects": aspect,
                 "sequence": protein_sequences[protein_id],
-                "ground_truth_terms": list(protein_annotations[aspect]['experimental'].get(protein_id, set()))
+                "known_terms": list(all_terms)  # Add labels explicitly
             }
             dataset_records.append(record)
     
@@ -415,6 +407,11 @@ def calculate_weighted_fmeasure(
     # Convert inputs to sets if they aren't already
     predicted_terms = set(predicted_terms)
     true_terms = set(true_terms)
+
+    print(f"\nCalculating weighted F-measure for {aspect} aspect...")
+    print(f"Predicted terms: {len(predicted_terms)}")
+    print(f"True terms: {len(true_terms)}")
+    print(f"Term weights loaded: {len(term_weights)}")
     
     # Calculate weighted true positives, false positives, and false negatives
     weighted_tp = sum(term_weights.get(term, 0.0) for term in (predicted_terms & true_terms))
@@ -433,28 +430,20 @@ def calculate_weighted_fmeasure(
         
     return weighted_f1, weighted_precision, weighted_recall
 
-def go_prediction_reward_func(prompts, completions, **kwargs):
+def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=None, **kwargs):
     """
     Reward function for GO term prediction using weighted F-measure and embedding similarity.
     - Exact matches get maximum reward
     - Non-exact matches get reward based on embedding similarity
+    
+    Args:
+        prompts: List of input prompts
+        completions: List of model completions
+        known_terms: List of known GO terms for each example
+        aspects: List of aspects (MFO, BPO, CCO) for each example
     """
     rewards = []
-    
-    # Load term weights if not already loaded
-    if not hasattr(go_prediction_reward_func, 'term_weights'):
-        print("\nLoading term weights...")
-        start_time = time.time()
-        go_prediction_reward_func.term_weights = load_term_weights(TERM_WEIGHTS_PATH)
-        print(f"Term weights loaded in {time.time() - start_time:.2f} seconds")
-    
-    # Load embedder if not already loaded
-    if not hasattr(go_prediction_reward_func, 'embedder'):
-        print("\nLoading GO term embeddings...")
-        start_time = time.time()
-        go_prediction_reward_func.embedder = create_embedder("function/cafa/Train/go-basic.obo")
-        print(f"GO term embeddings loaded in {time.time() - start_time:.2f} seconds")
-    
+
     for i, (prompt, completion) in enumerate(zip(prompts, completions)):
         try:
             reward = 0.0
@@ -472,31 +461,28 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
             # Extract predicted GO terms
             predicted_terms = set(extract_go_terms_from_response(completion))
             
-            # Extract aspect and ground truth terms from the prompt
-            aspect_match = re.search(r'Target Aspect: (MFO|BPO|CCO)', prompt)
-            aspect = aspect_match.group(1) if aspect_match else None
+            # Get aspect from passed aspects or extract from prompt
+            aspect = aspects[i] if aspects is not None else None
+            if not aspect:
+                aspect_match = re.search(r'Target Aspect: (MFO|BPO|CCO)', prompt)
+                aspect = aspect_match.group(1) if aspect_match else None
             
-            ground_truth_match = re.search(r'ground_truth_terms: \[(.*?)\]', prompt)
-            true_terms = set()
-            if ground_truth_match:
-                terms_str = ground_truth_match.group(1)
-                true_terms = {term.strip(' "\'') for term in terms_str.split(',')}
+            # Use provided labels if available, otherwise try to extract from prompt
+            true_terms = set(labels[i]) if labels is not None else set()
+            if not true_terms:
+                ground_truth_match = re.search(r'ground_truth_terms: \[(.*?)\]', prompt)
+                if ground_truth_match:
+                    terms_str = ground_truth_match.group(1)
+                    true_terms = {term.strip(' "\'') for term in terms_str.split(',')}
             
             if aspect and true_terms:
-                # Calculate standard weighted F-measure (for comparison)
-                weighted_f1, weighted_precision, weighted_recall = calculate_weighted_fmeasure(
-                    predicted_terms,
-                    true_terms,
-                    go_prediction_reward_func.term_weights,
-                    aspect
-                )
                 
                 # Calculate embedding-based similarity reward
                 embedding_reward = calculate_embedding_reward(
                     predicted_terms, 
                     true_terms, 
-                    go_prediction_reward_func.embedder,
-                    go_prediction_reward_func.term_weights,
+                    embedder,
+                    term_weights,
                     aspect
                 )
                 
@@ -512,7 +498,6 @@ def go_prediction_reward_func(prompts, completions, **kwargs):
                 print(f"Aspect: {aspect}")
                 print(f"Predicted Terms: {predicted_terms}")
                 print(f"True Terms: {true_terms}")
-                print(f"Traditional Weighted F1: {weighted_f1:.4f}")
                 print(f"Embedding-based Reward: {embedding_reward:.4f}")
                 print(f"Total Reward: {reward:.4f}")
                 print("\nThinking excerpt (first 200 chars):")
@@ -808,8 +793,6 @@ if len(train_dataset) > 0:
     example_entry = train_dataset[0]
     print(f"Protein ID: {example_entry['protein_id']}")
     print(f"Sequence length: {len(example_entry['sequence'])}")
-    print(f"Number of ground truth terms: {len(example_entry['ground_truth_terms'])}")
-    print(f"Ground truth terms: {example_entry['ground_truth_terms']}")
     print("\nPrompt excerpt (first 500 chars):")
     print(example_entry['prompt'][:500] + "...")
 
@@ -821,6 +804,18 @@ print(f"Median length: {sorted(prompt_lengths)[len(prompt_lengths)//2]}")
 print(f"Max length: {max(prompt_lengths)}")
 print(f"Min length: {min(prompt_lengths)}")
 
+    
+print("\nLoading term weights...")
+start_time = time.time()
+term_weights = load_term_weights(TERM_WEIGHTS_PATH)
+print(f"Term weights loaded in {time.time() - start_time:.2f} seconds")
+
+# Load embedder if not already loaded
+print("\nLoading GO term embeddings...")
+start_time = time.time()
+embedder = create_embedder("function/cafa/Train/go-basic.obo")
+print(f"GO term embeddings loaded in {time.time() - start_time:.2f} seconds")
+    
 
 # Initialize wandb only on main process
 proc_state = PartialState()
@@ -906,7 +901,7 @@ training_args = GRPOConfig(
 trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
-    reward_funcs=[go_prediction_reward_func],  # Use the GO prediction reward function
+    reward_funcs=[go_prediction_reward_func],
     args=training_args,
     train_dataset=train_dataset,
     callbacks=[WandBLoggingCallback(),CheckpointCallback(
