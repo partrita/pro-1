@@ -444,7 +444,7 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
     """
     rewards = []
 
-    for i, (prompt, completion) in enumerate(zip(prompts, completions)):
+    for i, (prompt, completion, known_term_list, aspect) in enumerate(zip(prompts, completions, known_terms, aspects)):
         try:
             reward = 0.0
             
@@ -462,13 +462,12 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
             predicted_terms = set(extract_go_terms_from_response(completion))
             
             # Get aspect from passed aspects or extract from prompt
-            aspect = aspects[i] if aspects is not None else None
             if not aspect:
                 aspect_match = re.search(r'Target Aspect: (MFO|BPO|CCO)', prompt)
                 aspect = aspect_match.group(1) if aspect_match else None
             
             # Use provided labels if available, otherwise try to extract from prompt
-            true_terms = set(labels[i]) if labels is not None else set()
+            true_terms = set(known_term_list) if known_term_list is not None else set()
             if not true_terms:
                 ground_truth_match = re.search(r'ground_truth_terms: \[(.*?)\]', prompt)
                 if ground_truth_match:
