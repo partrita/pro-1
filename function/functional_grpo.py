@@ -211,6 +211,33 @@ def load_protein_sequences(train_sequences_path):
         print(f"Error details: header={header if 'header' in locals() else 'N/A'}")
         return {}
 
+def get_plausible_distractors(true_terms: Set[str], go_terms: Dict, aspect: str, num_distractors: int = 4) -> List[str]:
+    """
+    Select plausible but incorrect GO terms as distractors for multiple choice.
+    
+    Args:
+        true_terms: Set of correct GO terms
+        go_terms: Dictionary of all GO terms and their information
+        aspect: The GO aspect (MFO, BPO, CCO)
+        num_distractors: Number of distractor terms to select
+    
+    Returns:
+        List of distractor GO terms
+    """
+    # Filter GO terms by aspect
+    aspect_terms = {
+        term_id: term_info for term_id, term_info in go_terms.items()
+        if term_info.get('namespace', '').upper() == aspect
+    }
+    
+    # Remove true terms from potential distractors
+    potential_distractors = set(aspect_terms.keys()) - true_terms
+    
+    # Select distractors randomly (could be made smarter by using embedding similarity)
+    distractors = random.sample(list(potential_distractors), min(num_distractors, len(potential_distractors)))
+    
+    return distractors
+
 def construct_prompt(
     protein_id: str,
     sequence: str,
@@ -219,19 +246,12 @@ def construct_prompt(
     target_aspect: str
 ) -> str:
     """
-    Construct prompt for GO term prediction for a specific aspect.
-    
-    Args:
-        protein_id: Protein identifier
-        sequence: Amino acid sequence
-        protein_annotations: Dictionary containing protein annotations
-        go_terms: Dictionary containing GO term information
-        target_aspect: Target aspect to predict (MFO, BPO, or CCO)
+    Construct multiple-choice prompt for GO term prediction.
     """
-    # Get protein description
+    # Get protein description and format known annotations (keeping existing code)
     protein_description = f"Protein ID: {protein_id}"
     
-    # Format known annotations for each aspect
+    # Format known annotations for each aspect (keeping existing code)
     def format_terms(terms: Set[str], aspect_name: str) -> str:
         if not terms:
             return f"  No experimentally validated {aspect_name} terms known"
@@ -245,12 +265,30 @@ def construct_prompt(
                 formatted.append(f"    Definition: {definition}")
         return "\n".join(formatted)
     
-    # Get experimental annotations for non-target aspects
+    # Get experimental annotations for non-target aspects (keeping existing code)
     other_aspects = [asp for asp in ['MFO', 'BPO', 'CCO'] if asp != target_aspect]
     aspect_annotations = {}
     for aspect in other_aspects:
         terms = protein_annotations.get(aspect, {}).get('experimental', {}).get(protein_id, set())
         aspect_annotations[aspect] = format_terms(terms, aspect)
+    
+    # Get true terms for the target aspect
+    true_terms = protein_annotations.get(target_aspect, {}).get('experimental', {}).get(protein_id, set())
+    
+    # Get distractor terms
+    distractors = get_plausible_distractors(true_terms, go_terms, target_aspect)
+    
+    # Combine true terms and distractors, shuffle them
+    all_choices = list(true_terms) + distractors
+    random.shuffle(all_choices)
+    
+    # Format choices with descriptions
+    formatted_choices = []
+    for i, term_id in enumerate(all_choices):
+        term_info = go_terms.get(term_id, {})
+        name = term_info.get('name', 'Unknown term')
+        definition = term_info.get('def', '').split('"')[1] if 'def' in term_info else ''
+        formatted_choices.append(f"Option {chr(65+i)}. {term_id}: {name}\n   Definition: {definition}")
     
     # Map aspect codes to full names
     aspect_names = {
@@ -259,7 +297,7 @@ def construct_prompt(
         'CCO': 'Cellular Component'
     }
     
-    go_prompt = f"""You are an expert in protein function prediction using the Gene Ontology (GO) framework. Your task is to predict {aspect_names[target_aspect]} terms for this protein based on its sequence and known annotations in other aspects.
+    go_prompt = f"""You are an expert in protein function prediction using the Gene Ontology (GO) framework. Your task is to select the correct {aspect_names[target_aspect]} terms for this protein from the given options.
 
 Target Aspect: {target_aspect}
 
@@ -277,33 +315,33 @@ KNOWN FUNCTIONAL ANNOTATIONS:
         go_prompt += f"{aspect_annotations[aspect]}\n"
 
     go_prompt += f"""
+CANDIDATE GO TERMS:
+{chr(10).join(formatted_choices)}
+
 Based on:
 1. The protein's amino acid sequence
 2. Known annotations in other aspects
 3. Your knowledge of protein domains, motifs, and cellular organization
 
-Predict the most likely {aspect_names[target_aspect]} GO terms for this protein. Consider:
-- A protein can have multiple functions and participate in multiple processes
-- GO terms form a hierarchy (more specific terms are preferred over general ones)
-- Focus on specific, detailed predictions rather than just high-level terms
-- Only predict terms that you are confident are supported by the sequence or known annotations
+Select the correct GO term(s) for this protein. Consider:
+- A protein can have multiple functions
+- Only select terms that you are confident are supported by the sequence or known annotations
+- Explain your reasoning for each selected and rejected term
 
-Your final answer should include only the predicted GO term IDs in a comma-separated list enclosed in \\boxed{{}} notation.
-Example: \\boxed{{GO:0003674,GO:0005515,GO:0046872}}
+Your final answer should be the letter(s) of the correct option(s) enclosed in \\boxed{{}} notation.
+Example: \\boxed{{A,C}} for selecting options A and C.
 
 First, think through your reasoning process considering:
-1. Sequence features (length, composition, motifs, similar sequences)
-2. Known annotations and their implications for {aspect_names[target_aspect]}
+1. Sequence features (length, composition, motifs)
+2. Known annotations and their implications
 3. Cellular context and biological roles
-4. Potential molecular mechanisms
-
-Then provide your predictions."""
+4. How each option relates to the protein's likely function"""
 
     whole_prompt = f"""<|start_header_id|>system<|end_header_id|>
 You are a helpful assistant that helps users with protein function prediction. You first think about the reasoning process and then provide the answer. The reasoning process and answer should be enclosed within <think> </think> and <answer> </answer> tags respectively. Your thinking should be at least 3000 words. |eot_id|><|start_header_id|>user<|end_header_id|>
 {go_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
 
-    return whole_prompt
+    return whole_prompt, {chr(65+i): term_id for i, term_id in enumerate(all_choices)}
 
 def create_dataset(
     protein_sequences: Dict[str, str],
@@ -432,15 +470,9 @@ def calculate_weighted_fmeasure(
 
 def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=None, **kwargs):
     """
-    Reward function for GO term prediction using weighted F-measure and embedding similarity.
-    - Exact matches get maximum reward
-    - Non-exact matches get reward based on embedding similarity
-    
-    Args:
-        prompts: List of input prompts
-        completions: List of model completions
-        aspect_terms: List of aspect GO terms for each example
-        aspects: List of aspects (MFO, BPO, CCO) for each example
+    Reward function for multiple-choice GO term prediction.
+    - Exact matches of correct options get maximum reward (1.0)
+    - No partial credit for incorrect options
     """
     rewards = []
 
@@ -448,74 +480,40 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
         try:
             reward = 0.0
             
-            # Print completion for analysis
-            print(f"\nCOMPLETION {i}")
-            print(completion)
-            print('-'*100)
-            
             # Extract thinking for logging
             think_match = re.search(r'<think>(.*?)</think>', completion, re.DOTALL)
             thinking = think_match.group(1).strip() if think_match else "No thinking found"
             thinking_length = len(thinking.split())
             
-            # Extract predicted GO terms
-            predicted_terms = set(extract_go_terms_from_response(completion))
-            
-            # Get aspect from passed aspects or extract from prompt
-            if not aspect:
-                aspect_match = re.search(r'Target Aspect: (MFO|BPO|CCO)', prompt)
-                aspect = aspect_match.group(1) if aspect_match else None
-            
-            # Use provided labels if available, otherwise try to extract from prompt
-            true_terms = set(aspect_term_list) if aspect_term_list is not None else set()
-            if not true_terms:
-                ground_truth_match = re.search(r'ground_truth_terms: \[(.*?)\]', prompt)
-                if ground_truth_match:
-                    terms_str = ground_truth_match.group(1)
-                    true_terms = {term.strip(' "\'') for term in terms_str.split(',')}
-
-            
-            if aspect and true_terms:
+            # Extract predicted options
+            boxed_match = re.search(r'\\boxed{([^}]+)}', completion)
+            if boxed_match:
+                selected_options = set(opt.strip() for opt in boxed_match.group(1).split(','))
                 
-                # Calculate embedding-based similarity reward
-                embedding_reward = calculate_embedding_reward(
-                    predicted_terms, 
-                    true_terms, 
-                    embedder,
-                    term_weights,
-                    aspect
-                )
-
-                print(f"Embedding reward: {embedding_reward}")
+                # Get the mapping of options to GO terms from the prompt
+                options_match = re.findall(r'Option ([A-Z])\. (GO:\d{7}):', prompt)
+                options_map = {opt: term_id for opt, term_id in options_match}
                 
-                # Base reward on embedding similarity score
-                reward += GO_PREDICTION_REWARD * embedding_reward
+                # Convert selected options to GO terms
+                predicted_terms = {options_map[opt] for opt in selected_options if opt in options_map}
+                true_terms = set(aspect_term_list)
                 
-                # Additional reward for properly formatted output
-                if re.search(r'\\boxed{([^}]+)}', completion):
-                    reward += FORMATTED_OUTPUT_REWARD
+                # Calculate reward based on percentage of correct terms
+                num_correct = len(predicted_terms & true_terms)  # intersection of sets
+                num_total = max(len(predicted_terms), len(true_terms))
+                reward = (num_correct / num_total) * GO_PREDICTION_REWARD if num_total > 0 else 0.0
                 
-                # Print detailed comparison for every completion
-                print(f"\nCompletion {i} Analysis:")
-                print(f"Aspect: {aspect}")
-                print(f"Predicted Terms: {predicted_terms}")
-                print(f"True Terms: {true_terms}")
-                print(f"Embedding-based Reward: {embedding_reward:.4f}")
-                print('-'*100)
+                # Add formatting reward
+                reward += FORMATTED_OUTPUT_REWARD
                 
-                # Log detailed metrics
-                correct_terms = predicted_terms.intersection(true_terms)
-                correct_percentage = len(correct_terms) / len(true_terms) if true_terms else 0.0
-                
+                # Log metrics
                 wandb.log({
                     f"reward/completion_{i}/total_reward": reward,
-                    f"reward/completion_{i}/embedding_reward": embedding_reward,
                     f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
                     f"reward/completion_{i}/true_terms_count": len(true_terms),
                     f"reward/completion_{i}/thinking_length": thinking_length,
                     f"reward/completion_{i}/aspect": aspect,
-                    f"reward/completion_{i}/correct_terms_count": len(correct_terms),
-                    f"reward/completion_{i}/correct_percentage": correct_percentage
+                    f"reward/completion_{i}/correct": predicted_terms == true_terms
                 })
             
             rewards.append(reward)
