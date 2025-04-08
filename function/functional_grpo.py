@@ -337,9 +337,9 @@ def create_dataset(
         print(f"  Proteins without experimental annotations: {len(proteins_without_exp)}")
         
         # Create records for proteins without experimental annotations in this aspect
-        for protein_id in list(proteins_without_exp)[:max_examples // 3]:  # Limit per aspect
+        for protein_id in list(proteins_with_exp):  
             # Get all GO terms for this protein in this aspect
-            all_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
+            aspect_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
             
             record = {
                 "prompt": construct_prompt(
@@ -352,7 +352,7 @@ def create_dataset(
                 "protein_id": protein_id,
                 "aspects": aspect,
                 "sequence": protein_sequences[protein_id],
-                "known_terms": list(all_terms)  # Add labels explicitly
+                "aspect_terms": list(aspect_terms), 
             }
             dataset_records.append(record)
     
@@ -430,7 +430,7 @@ def calculate_weighted_fmeasure(
         
     return weighted_f1, weighted_precision, weighted_recall
 
-def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=None, **kwargs):
+def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=None, **kwargs):
     """
     Reward function for GO term prediction using weighted F-measure and embedding similarity.
     - Exact matches get maximum reward
@@ -439,12 +439,12 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
     Args:
         prompts: List of input prompts
         completions: List of model completions
-        known_terms: List of known GO terms for each example
+        aspect_terms: List of aspect GO terms for each example
         aspects: List of aspects (MFO, BPO, CCO) for each example
     """
     rewards = []
 
-    for i, (prompt, completion, known_term_list, aspect) in enumerate(zip(prompts, completions, known_terms, aspects)):
+    for i, (prompt, completion, aspect_term_list, aspect) in enumerate(zip(prompts, completions, aspect_terms, aspects)):
         try:
             reward = 0.0
             
@@ -467,12 +467,13 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
                 aspect = aspect_match.group(1) if aspect_match else None
             
             # Use provided labels if available, otherwise try to extract from prompt
-            true_terms = set(known_term_list) if known_term_list is not None else set()
+            true_terms = set(aspect_term_list) if aspect_term_list is not None else set()
             if not true_terms:
                 ground_truth_match = re.search(r'ground_truth_terms: \[(.*?)\]', prompt)
                 if ground_truth_match:
                     terms_str = ground_truth_match.group(1)
                     true_terms = {term.strip(' "\'') for term in terms_str.split(',')}
+
             
             if aspect and true_terms:
                 
@@ -484,6 +485,8 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
                     term_weights,
                     aspect
                 )
+
+                print(f"Embedding reward: {embedding_reward}")
                 
                 # Base reward on embedding similarity score
                 reward += GO_PREDICTION_REWARD * embedding_reward
@@ -498,24 +501,21 @@ def go_prediction_reward_func(prompts, completions, known_terms=None, aspects=No
                 print(f"Predicted Terms: {predicted_terms}")
                 print(f"True Terms: {true_terms}")
                 print(f"Embedding-based Reward: {embedding_reward:.4f}")
-                print(f"Total Reward: {reward:.4f}")
-                print("\nThinking excerpt (first 200 chars):")
-                print(thinking[:200] + "...")
-                print("\nCompletion excerpt (first 200 chars):")
-                print(completion[:200] + "...")
                 print('-'*100)
                 
                 # Log detailed metrics
+                correct_terms = predicted_terms.intersection(true_terms)
+                correct_percentage = len(correct_terms) / len(true_terms) if true_terms else 0.0
+                
                 wandb.log({
                     f"reward/completion_{i}/total_reward": reward,
-                    f"reward/completion_{i}/weighted_precision": weighted_precision,
-                    f"reward/completion_{i}/weighted_recall": weighted_recall,
-                    f"reward/completion_{i}/weighted_f1": weighted_f1,
                     f"reward/completion_{i}/embedding_reward": embedding_reward,
                     f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
                     f"reward/completion_{i}/true_terms_count": len(true_terms),
                     f"reward/completion_{i}/thinking_length": thinking_length,
-                    f"reward/completion_{i}/aspect": aspect
+                    f"reward/completion_{i}/aspect": aspect,
+                    f"reward/completion_{i}/correct_terms_count": len(correct_terms),
+                    f"reward/completion_{i}/correct_percentage": correct_percentage
                 })
             
             rewards.append(reward)
@@ -549,12 +549,14 @@ def calculate_embedding_reward(predicted_terms: Set[str],
     Returns:
         float: Embedding-based reward score (0.0 to 1.0)
     """
+    
     if not predicted_terms or not true_terms:
         return 0.0
     
     # Filter terms by aspect if weights are available
     valid_predicted = {term for term in predicted_terms if term in term_weights}
     valid_true = {term for term in true_terms if term in term_weights}
+
     
     if not valid_predicted or not valid_true:
         return 0.0
@@ -601,7 +603,7 @@ def calculate_embedding_reward(predicted_terms: Set[str],
             similarity = embedder.compute_reward(pred_term, true_term)
             max_similarity = max(max_similarity, similarity)
         
-        recall_scores.append(max_similarity * true_weight)
+        recall_scores.append(max_similarity * true_weight-0.5)
     
     # Calculate weighted precision and recall
     if precision_weights and precision_scores:
@@ -858,7 +860,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit=True,
     fast_inference=True,
     max_lora_rank=32,  # Adjust based on your needs
-    gpu_memory_utilization=0.6,
+    gpu_memory_utilization=0.3,
 )
 
 # Configure LoRA
@@ -886,9 +888,9 @@ training_args = GRPOConfig(
     optim="paged_adamw_8bit",
     logging_steps=1,
     bf16=True,
-    per_device_train_batch_size=2,
+    per_device_train_batch_size=3,
     gradient_accumulation_steps=4,
-    num_generations=2,
+    num_generations=3,
     max_prompt_length=MAX_INPUT_LENGTH,
     max_completion_length=MAX_OUTPUT_LENGTH,
     num_train_epochs=NUM_EPOCHS,
