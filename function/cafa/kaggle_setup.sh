@@ -1,4 +1,5 @@
 pip install kaggle
+pip install sentence-transformers
 
 ## insert your kaggle api key here
 
