@@ -523,8 +523,8 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
                 print('completion: ', completion)
                 print('PREDICTED TERMS: ', predicted_terms)
                 print('TRUE TERMS: ', true_terms)
-                print('ABSOLUTE NUM CORRECT: ', num_correct)
                 num_total = max(len(predicted_terms), len(true_terms))
+                print('PERCENT CORRECT: ', num_correct / num_total)
                 reward = (num_correct / num_total) * GO_PREDICTION_REWARD if num_total > 0 else 0.0
                 
                 # Add formatting reward
