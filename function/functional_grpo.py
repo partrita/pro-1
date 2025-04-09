@@ -1,3 +1,4 @@
+from unsloth import FastLanguageModel, PatchFastRL
 import torch
 from transformers import AutoTokenizer, BitsAndBytesConfig, TrainerCallback, AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
@@ -34,7 +35,7 @@ from function.embed import create_embedder
 load_dotenv()
 
 NUM_EPOCHS = 5
-MAX_INPUT_LENGTH = 6000
+MAX_INPUT_LENGTH = 6500
 MAX_OUTPUT_LENGTH = 4096
 THINK_LENGTH = 3000
 DEVICE = "cuda"
@@ -276,19 +277,18 @@ def construct_prompt(
     true_terms = protein_annotations.get(target_aspect, {}).get('experimental', {}).get(protein_id, set())
     
     # Get distractor terms
-    distractors = get_plausible_distractors(true_terms, go_terms, target_aspect)
+    distractors = get_plausible_distractors(true_terms, go_terms, target_aspect, num_distractors=3*len(true_terms))
     
     # Combine true terms and distractors, shuffle them
     all_choices = list(true_terms) + distractors
     random.shuffle(all_choices)
     
-    # Format choices with descriptions
+    # Format choices with descriptions (only name, no definition)
     formatted_choices = []
     for i, term_id in enumerate(all_choices):
         term_info = go_terms.get(term_id, {})
         name = term_info.get('name', 'Unknown term')
-        definition = term_info.get('def', '').split('"')[1] if 'def' in term_info else ''
-        formatted_choices.append(f"Option {chr(65+i)}. {term_id}: {name}\n   Definition: {definition}")
+        formatted_choices.append(f"Option {chr(65+i)}. {term_id}: {name}")
     
     # Map aspect codes to full names
     aspect_names = {
@@ -297,7 +297,7 @@ def construct_prompt(
         'CCO': 'Cellular Component'
     }
     
-    go_prompt = f"""You are an expert in protein function prediction using the Gene Ontology (GO) framework. Your task is to select the correct {aspect_names[target_aspect]} terms for this protein from the given options.
+    go_prompt = f"""You are an expert in protein function prediction using the Gene Ontology (GO) framework. Your task is to select the correct {aspect_names[target_aspect]} terms for this protein from the given options. There are multiple correct answers, you must select all of them.
 
 Target Aspect: {target_aspect}
 
@@ -366,6 +366,9 @@ def create_dataset(
     
     # Create examples for each aspect
     for aspect in ['MFO', 'BPO', 'CCO']:
+        if len(dataset_records) >= max_examples:
+            break
+            
         # Get proteins with experimental annotations for this aspect
         proteins_with_exp = set(protein_annotations[aspect]['experimental'].keys())
         proteins_without_exp = proteins_with_sequences - proteins_with_exp
@@ -374,28 +377,45 @@ def create_dataset(
         print(f"  Proteins with experimental annotations: {len(proteins_with_exp)}")
         print(f"  Proteins without experimental annotations: {len(proteins_without_exp)}")
         
-        # Create records for proteins without experimental annotations in this aspect
-        for protein_id in list(proteins_with_exp):  
+        # Create records for proteins with experimental annotations in this aspect
+        for protein_id in list(proteins_with_exp):
+            if len(dataset_records) >= max_examples:
+                break
+                
             # Get all GO terms for this protein in this aspect
             aspect_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
+
+            whole_prompt, options_map = construct_prompt(
+                protein_id,
+                protein_sequences[protein_id],
+                protein_annotations,
+                go_terms,
+                target_aspect=aspect
+            )
             
             record = {
-                "prompt": construct_prompt(
-                    protein_id,
-                    protein_sequences[protein_id],
-                    protein_annotations,
-                    go_terms,
-                    target_aspect=aspect
-                ),
+                "prompt": whole_prompt,
                 "protein_id": protein_id,
                 "aspects": aspect,
                 "sequence": protein_sequences[protein_id],
                 "aspect_terms": list(aspect_terms), 
+                "options_map": options_map
             }
             dataset_records.append(record)
     
     print(f"\nCreated {len(dataset_records)} total dataset records")
-    return dataset_records
+    # Filter out prompts exceeding max length
+    import tiktoken
+    enc = tiktoken.get_encoding("cl100k_base")
+    filtered_records = [record for record in dataset_records if len(enc.encode(record['prompt'])) <= MAX_INPUT_LENGTH]
+    removed_count = len(dataset_records) - len(filtered_records)
+    print(f"\nRemoved {removed_count} prompts exceeding max length ({MAX_INPUT_LENGTH})")
+    if removed_count > 0:
+        print("Example of a removed prompt:")
+        long_prompt = next(record for record in dataset_records if len(enc.encode(record['prompt'])) > MAX_INPUT_LENGTH)
+        print(f"Protein ID: {long_prompt['protein_id']}")
+        print(f"Token count: {len(enc.encode(long_prompt['prompt']))}")
+    return filtered_records
 
 def extract_go_terms_from_response(response):
     """Extract GO terms from model response"""
@@ -468,15 +488,18 @@ def calculate_weighted_fmeasure(
         
     return weighted_f1, weighted_precision, weighted_recall
 
-def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=None, **kwargs):
+def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=None, options_map=None, **kwargs):
     """
     Reward function for multiple-choice GO term prediction.
     - Exact matches of correct options get maximum reward (1.0)
-    - No partial credit for incorrect options
+    - partial credit for incorrect options
     """
     rewards = []
+    
+    # Get the current global step from kwargs if available
+    global_step = kwargs.get('global_step', 0)
 
-    for i, (prompt, completion, aspect_term_list, aspect) in enumerate(zip(prompts, completions, aspect_terms, aspects)):
+    for i, (prompt, completion, aspect_term_list, aspect, options) in enumerate(zip(prompts, completions, aspect_terms, aspects, options_map)):
         try:
             reward = 0.0
             
@@ -489,32 +512,35 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
             boxed_match = re.search(r'\\boxed{([^}]+)}', completion)
             if boxed_match:
                 selected_options = set(opt.strip() for opt in boxed_match.group(1).split(','))
-                
-                # Get the mapping of options to GO terms from the prompt
-                options_match = re.findall(r'Option ([A-Z])\. (GO:\d{7}):', prompt)
-                options_map = {opt: term_id for opt, term_id in options_match}
-                
+                                
                 # Convert selected options to GO terms
-                predicted_terms = {options_map[opt] for opt in selected_options if opt in options_map}
+                predicted_terms = {options[opt] for opt in selected_options if opt in options}
                 true_terms = set(aspect_term_list)
                 
                 # Calculate reward based on percentage of correct terms
                 num_correct = len(predicted_terms & true_terms)  # intersection of sets
+                print('--------------------------------')
+                print('completion: ', completion)
+                print('PREDICTED TERMS: ', predicted_terms)
+                print('TRUE TERMS: ', true_terms)
+                print('ABSOLUTE NUM CORRECT: ', num_correct)
                 num_total = max(len(predicted_terms), len(true_terms))
                 reward = (num_correct / num_total) * GO_PREDICTION_REWARD if num_total > 0 else 0.0
                 
                 # Add formatting reward
                 reward += FORMATTED_OUTPUT_REWARD
                 
-                # Log metrics
-                wandb.log({
-                    f"reward/completion_{i}/total_reward": reward,
-                    f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
-                    f"reward/completion_{i}/true_terms_count": len(true_terms),
-                    f"reward/completion_{i}/thinking_length": thinking_length,
-                    f"reward/completion_{i}/aspect": aspect,
-                    f"reward/completion_{i}/correct": predicted_terms == true_terms
-                })
+                # Log metrics with global step
+                proc_state = PartialState()
+                if proc_state.is_main_process:
+                    wandb.log({
+                        f"reward/completion_{i}/total_reward": reward,
+                        f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
+                        f"reward/completion_{i}/true_terms_count": len(true_terms),
+                        f"reward/completion_{i}/thinking_length": thinking_length,
+                        f"reward/completion_{i}/aspect": aspect,
+                        f"reward/completion_{i}/correct": predicted_terms == true_terms
+                    }, step=global_step)
             
             rewards.append(reward)
                         
@@ -848,7 +874,6 @@ if proc_state.is_main_process:
         raise  # Add this to stop execution if login fails
 
 # Initialize Unsloth's FastLanguageModel with GRPO patch
-from unsloth import FastLanguageModel, PatchFastRL
 PatchFastRL("GRPO", FastLanguageModel)
 
 # Model initialization
