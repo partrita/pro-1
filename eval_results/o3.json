@@ -1,0 +1,2077 @@
+{
+  "results": [
+    {
+      "protein_id": "Q9I544",
+      "predicted_terms": [
+        "J",
+        "Q"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "I",
+        "J",
+        "L",
+        "Q"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "P20689",
+      "predicted_terms": [
+        "C",
+        "D",
+        "f",
+        "c",
+        "_",
+        "g",
+        "l",
+        "V",
+        "U",
+        "m",
+        "]",
+        "M"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "M",
+        "T",
+        "U",
+        "V",
+        "]",
+        "_",
+        "b",
+        "c",
+        "f",
+        "g",
+        "j",
+        "l",
+        "m"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889
+      }
+    },
+    {
+      "protein_id": "Q8UWJ4",
+      "predicted_terms": [
+        "J",
+        "O",
+        "R"
+      ],
+      "actual_terms": [
+        "J",
+        "M",
+        "O",
+        "P",
+        "R"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999
+      }
+    },
+    {
+      "protein_id": "Q5EU90",
+      "predicted_terms": [
+        "J",
+        "O",
+        "M",
+        "Q"
+      ],
+      "actual_terms": [
+        "A",
+        "H",
+        "J",
+        "K",
+        "L",
+        "M",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "V",
+        "Z",
+        "[",
+        "^",
+        "_"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "E9Q9N8",
+      "predicted_terms": [
+        "O"
+      ],
+      "actual_terms": [
+        "E",
+        "J",
+        "L",
+        "M",
+        "O",
+        "S",
+        "V",
+        "X"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.125,
+        "f1": 0.2222222222222222
+      }
+    },
+    {
+      "protein_id": "P76514",
+      "predicted_terms": [
+        "M",
+        "O"
+      ],
+      "actual_terms": [
+        "B",
+        "E",
+        "H",
+        "I",
+        "J",
+        "M",
+        "N",
+        "O",
+        "P",
+        "U",
+        "V",
+        "W",
+        "Y"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.15384615384615385,
+        "f1": 0.2666666666666667
+      }
+    },
+    {
+      "protein_id": "Q1LWU6",
+      "predicted_terms": [
+        "C"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "F"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "D3YV92",
+      "predicted_terms": [
+        "B",
+        "E",
+        "H"
+      ],
+      "actual_terms": [
+        "B",
+        "E",
+        "H"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    {
+      "protein_id": "F1QJ13",
+      "predicted_terms": [
+        "A",
+        "D"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "D"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q14494",
+      "predicted_terms": [
+        "`",
+        "L",
+        "g",
+        "w"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "F",
+        "J",
+        "K",
+        "L",
+        "N",
+        "P",
+        "R",
+        "U",
+        "]",
+        "`",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "p",
+        "q",
+        "s",
+        "w",
+        "}",
+        "~"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.17391304347826086,
+        "f1": 0.29629629629629634
+      }
+    },
+    {
+      "protein_id": "P19468",
+      "predicted_terms": [
+        "",
+        "U",
+        "W",
+        "X",
+        "U",
+        "W",
+        "X"
+      ],
+      "actual_terms": [
+        "F",
+        "G",
+        "J",
+        "T",
+        "U",
+        "W",
+        "X",
+        "["
+      ],
+      "metrics": {
+        "precision": 0.75,
+        "recall": 0.375,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "P06767",
+      "predicted_terms": [
+        "A",
+        "J",
+        "N"
+      ],
+      "actual_terms": [
+        "A",
+        "F",
+        "I",
+        "J",
+        "L",
+        "N",
+        "O",
+        "P"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.375,
+        "f1": 0.5454545454545454
+      }
+    },
+    {
+      "protein_id": "P53954",
+      "predicted_terms": [
+        "U"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "C",
+        "L",
+        "M",
+        "O",
+        "T",
+        "U",
+        "]",
+        "`",
+        "j"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.09090909090909091,
+        "f1": 0.16666666666666669
+      }
+    },
+    {
+      "protein_id": "F1B281",
+      "predicted_terms": [
+        "N",
+        "T"
+      ],
+      "actual_terms": [
+        "A",
+        "E",
+        "F",
+        "L",
+        "N",
+        "T",
+        "X",
+        "Y",
+        "Z",
+        "\\",
+        "_"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.18181818181818182,
+        "f1": 0.3076923076923077
+      }
+    },
+    {
+      "protein_id": "Q676U5",
+      "predicted_terms": [
+        "",
+        "C",
+        "I",
+        "L",
+        "N",
+        "O",
+        "P"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "G",
+        "H",
+        "I",
+        "L",
+        "N",
+        "O",
+        "P",
+        "R"
+      ],
+      "metrics": {
+        "precision": 0.8571428571428571,
+        "recall": 0.6,
+        "f1": 0.7058823529411764
+      }
+    },
+    {
+      "protein_id": "Q96EM0",
+      "predicted_terms": [
+        "B",
+        "H"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "E",
+        "F",
+        "H"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      }
+    },
+    {
+      "protein_id": "Q8H1P9",
+      "predicted_terms": [
+        "j",
+        "N",
+        "p"
+      ],
+      "actual_terms": [
+        "H",
+        "I",
+        "N",
+        "Q",
+        "U",
+        "V",
+        "Y",
+        "\\",
+        "j",
+        "l",
+        "o",
+        "p"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "F4JPL2",
+      "predicted_terms": [
+        "A"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "G"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q8STG6",
+      "predicted_terms": [
+        "H",
+        "S",
+        "W",
+        "e",
+        "F",
+        "M"
+      ],
+      "actual_terms": [
+        "B",
+        "F",
+        "H",
+        "I",
+        "J",
+        "L",
+        "M",
+        "Q",
+        "S",
+        "T",
+        "U",
+        "W",
+        "X",
+        "Y",
+        "[",
+        "\\",
+        "e",
+        "f",
+        "g",
+        "h",
+        "j",
+        "l",
+        "m"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.2608695652173913,
+        "f1": 0.41379310344827586
+      }
+    },
+    {
+      "protein_id": "Q8W4H7",
+      "predicted_terms": [
+        "B",
+        "F",
+        "O"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "E",
+        "F",
+        "O",
+        "P",
+        "R"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "H3BJD0",
+      "predicted_terms": [
+        "",
+        "A",
+        "D",
+        "E"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "E"
+      ],
+      "metrics": {
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571
+      }
+    },
+    {
+      "protein_id": "F4J1I8",
+      "predicted_terms": [
+        "D",
+        "g"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "E",
+        "J",
+        "P",
+        "T",
+        "U",
+        "Z",
+        "f",
+        "g"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.2,
+        "f1": 0.33333333333333337
+      }
+    },
+    {
+      "protein_id": "Q02745",
+      "predicted_terms": [
+        "B",
+        "C",
+        "E",
+        "K"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "E",
+        "H",
+        "I",
+        "K"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q6PDQ2",
+      "predicted_terms": [
+        "A",
+        "F",
+        "I",
+        "A",
+        "F",
+        "I"
+      ],
+      "actual_terms": [
+        "A",
+        "E",
+        "F",
+        "G",
+        "I"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999
+      }
+    },
+    {
+      "protein_id": "B7ZLP7",
+      "predicted_terms": [
+        "H"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "F"
+      ],
+      "metrics": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0
+      }
+    },
+    {
+      "protein_id": "F4K5J1",
+      "predicted_terms": [
+        "",
+        "I",
+        "L"
+      ],
+      "actual_terms": [
+        "E",
+        "I",
+        "L"
+      ],
+      "metrics": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1": 0.6666666666666666
+      }
+    },
+    {
+      "protein_id": "P45548",
+      "predicted_terms": [
+        "H"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "C",
+        "F",
+        "G",
+        "I",
+        "N"
+      ],
+      "metrics": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0
+      }
+    },
+    {
+      "protein_id": "P91663",
+      "predicted_terms": [
+        "F",
+        "I",
+        "L",
+        "["
+      ],
+      "actual_terms": [
+        "B",
+        "F",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "Q",
+        "S",
+        "Z",
+        "[",
+        "\\"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.2857142857142857,
+        "f1": 0.4444444444444445
+      }
+    },
+    {
+      "protein_id": "E9Q711",
+      "predicted_terms": [
+        "B",
+        "C"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "I"
+      ],
+      "metrics": {
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "Q9BZJ0",
+      "predicted_terms": [
+        "A",
+        "H",
+        "T"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "H",
+        "P",
+        "S",
+        "T",
+        "Y"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "Q41798",
+      "predicted_terms": [
+        "B",
+        "G",
+        "O"
+      ],
+      "actual_terms": [
+        "A",
+        "E",
+        "G",
+        "I",
+        "M",
+        "O"
+      ],
+      "metrics": {
+        "precision": 0.6666666666666666,
+        "recall": 0.3333333333333333,
+        "f1": 0.4444444444444444
+      }
+    },
+    {
+      "protein_id": "Q551V8",
+      "predicted_terms": [
+        "K",
+        "P"
+      ],
+      "actual_terms": [
+        "B",
+        "E",
+        "I",
+        "K",
+        "N",
+        "P"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "P32178",
+      "predicted_terms": [
+        "A"
+      ],
+      "actual_terms": [
+        "A",
+        "F",
+        "G",
+        "K",
+        "M",
+        "T",
+        "Z",
+        "^",
+        "b",
+        "h",
+        "i",
+        "l",
+        "m",
+        "n",
+        "p",
+        "q",
+        "|",
+        "\u0080"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.05555555555555555,
+        "f1": 0.10526315789473684
+      }
+    },
+    {
+      "protein_id": "A0A0B4LHT4",
+      "predicted_terms": [
+        "F",
+        "I",
+        "P",
+        "R"
+      ],
+      "actual_terms": [
+        "B",
+        "E",
+        "F",
+        "I",
+        "J",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "X",
+        "f",
+        "g",
+        "k",
+        "m"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.26666666666666666,
+        "f1": 0.4210526315789474
+      }
+    },
+    {
+      "protein_id": "P0A6M8",
+      "predicted_terms": [
+        "c",
+        "n",
+        "p",
+        "Q",
+        "Y"
+      ],
+      "actual_terms": [
+        "A",
+        "G",
+        "N",
+        "O",
+        "Q",
+        "V",
+        "X",
+        "Y",
+        "a",
+        "c",
+        "e",
+        "f",
+        "g",
+        "n",
+        "o",
+        "p"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3125,
+        "f1": 0.47619047619047616
+      }
+    },
+    {
+      "protein_id": "A0A0B4K7X1",
+      "predicted_terms": [
+        "",
+        "F",
+        "H",
+        "M",
+        "F",
+        "H",
+        "M"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "F",
+        "H",
+        "J",
+        "M"
+      ],
+      "metrics": {
+        "precision": 0.75,
+        "recall": 0.5,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "Q8SYV5",
+      "predicted_terms": [
+        "J",
+        "P",
+        "]",
+        "c",
+        "h",
+        "a"
+      ],
+      "actual_terms": [
+        "C",
+        "J",
+        "L",
+        "P",
+        "S",
+        "T",
+        "]",
+        "a",
+        "c",
+        "d",
+        "f",
+        "g",
+        "h",
+        "i"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "P02521",
+      "predicted_terms": [
+        "E",
+        "L",
+        "N"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "E",
+        "F",
+        "H",
+        "L",
+        "M",
+        "N"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.375,
+        "f1": 0.5454545454545454
+      }
+    },
+    {
+      "protein_id": "B0L3A2",
+      "predicted_terms": [
+        "b",
+        "e",
+        "O"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "H",
+        "J",
+        "O",
+        "W",
+        "Y",
+        "_",
+        "`",
+        "b",
+        "c",
+        "e"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "G5ECN5",
+      "predicted_terms": [
+        "",
+        "F",
+        "j"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "E",
+        "F",
+        "J",
+        "Q",
+        "V",
+        "W",
+        "Y",
+        "Z",
+        "^",
+        "d",
+        "f",
+        "h",
+        "j"
+      ],
+      "metrics": {
+        "precision": 0.6666666666666666,
+        "recall": 0.13333333333333333,
+        "f1": 0.2222222222222222
+      }
+    },
+    {
+      "protein_id": "P90629",
+      "predicted_terms": [
+        "G",
+        "I"
+      ],
+      "actual_terms": [
+        "D",
+        "F",
+        "G",
+        "I",
+        "M",
+        "O",
+        "T",
+        "W"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "P58304",
+      "predicted_terms": [
+        "E",
+        "I",
+        "K",
+        "L",
+        "O",
+        "S",
+        "U",
+        "`"
+      ],
+      "actual_terms": [
+        "E",
+        "F",
+        "I",
+        "K",
+        "L",
+        "N",
+        "O",
+        "S",
+        "T",
+        "U",
+        "V",
+        "X",
+        "Z",
+        "\\",
+        "]",
+        "_",
+        "`",
+        "a"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.4444444444444444,
+        "f1": 0.6153846153846153
+      }
+    },
+    {
+      "protein_id": "Q8IGZ4",
+      "predicted_terms": [
+        "P"
+      ],
+      "actual_terms": [
+        "F",
+        "G",
+        "H",
+        "P",
+        "V",
+        "W"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857
+      }
+    },
+    {
+      "protein_id": "P29385",
+      "predicted_terms": [
+        "F",
+        "H",
+        "J"
+      ],
+      "actual_terms": [
+        "E",
+        "F",
+        "H",
+        "J",
+        "K",
+        "M",
+        "O",
+        "P",
+        "S",
+        "T",
+        "V",
+        "W"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "P25342",
+      "predicted_terms": [
+        "[",
+        "\\;\u0090"
+      ],
+      "actual_terms": [
+        "A",
+        "J",
+        "N",
+        "O",
+        "P",
+        "R",
+        "V",
+        "[",
+        "_",
+        "c",
+        "f",
+        "l",
+        "n",
+        "z",
+        "\u007f",
+        "\u0081",
+        "\u0082",
+        "\u0088",
+        "\u0089",
+        "\u0090"
+      ],
+      "metrics": {
+        "precision": 0.5,
+        "recall": 0.05,
+        "f1": 0.09090909090909091
+      }
+    },
+    {
+      "protein_id": "Q01231",
+      "predicted_terms": [
+        "",
+        "H",
+        "O",
+        "R",
+        "T",
+        "W",
+        "[",
+        "\\"
+      ],
+      "actual_terms": [
+        "H",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "T",
+        "W",
+        "Y",
+        "[",
+        "\\"
+      ],
+      "metrics": {
+        "precision": 0.875,
+        "recall": 0.7,
+        "f1": 0.7777777777777777
+      }
+    },
+    {
+      "protein_id": "P17671",
+      "predicted_terms": [
+        "B",
+        "F",
+        "G",
+        "H",
+        "I",
+        "P"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "F",
+        "G",
+        "H",
+        "M",
+        "O",
+        "P"
+      ],
+      "metrics": {
+        "precision": 0.8333333333333334,
+        "recall": 0.625,
+        "f1": 0.7142857142857143
+      }
+    },
+    {
+      "protein_id": "Q38B27",
+      "predicted_terms": [
+        "B",
+        "F",
+        "J",
+        "L"
+      ],
+      "actual_terms": [
+        "B",
+        "F",
+        "H",
+        "J",
+        "K",
+        "L",
+        "U",
+        "V",
+        "X",
+        "[",
+        "]",
+        "_"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q21344",
+      "predicted_terms": [
+        "D",
+        "G",
+        "H"
+      ],
+      "actual_terms": [
+        "D",
+        "G",
+        "H"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    {
+      "protein_id": "Q9Y463",
+      "predicted_terms": [
+        "G",
+        "K",
+        "L"
+      ],
+      "actual_terms": [
+        "B",
+        "G",
+        "H",
+        "K",
+        "L",
+        "S",
+        "T",
+        "Z",
+        "[",
+        "\\",
+        "]",
+        "e",
+        "f"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.23076923076923078,
+        "f1": 0.375
+      }
+    },
+    {
+      "protein_id": "A0NXQ8",
+      "predicted_terms": [
+        "",
+        "I",
+        "]",
+        "b",
+        "k",
+        "M"
+      ],
+      "actual_terms": [
+        "B",
+        "H",
+        "I",
+        "K",
+        "O",
+        "V",
+        "W",
+        "]",
+        "a",
+        "b",
+        "d",
+        "h",
+        "i",
+        "k",
+        "l"
+      ],
+      "metrics": {
+        "precision": 0.6666666666666666,
+        "recall": 0.26666666666666666,
+        "f1": 0.3809523809523809
+      }
+    },
+    {
+      "protein_id": "I6L9D0",
+      "predicted_terms": [
+        "B",
+        "F"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "F"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q9WVC6",
+      "predicted_terms": [
+        "A",
+        "C",
+        "G",
+        "I",
+        "P"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "D",
+        "G",
+        "I",
+        "K",
+        "L",
+        "N",
+        "P",
+        "S"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      }
+    },
+    {
+      "protein_id": "P08069",
+      "predicted_terms": [
+        "A",
+        "B",
+        "S",
+        "b",
+        "W",
+        "\u0082",
+        "\u0084"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "G",
+        "H",
+        "L",
+        "N",
+        "R",
+        "S",
+        "W",
+        "X",
+        "Y",
+        "]",
+        "^",
+        "b",
+        "c",
+        "d",
+        "i",
+        "j",
+        "l",
+        "m",
+        "n",
+        "p",
+        "q",
+        "r",
+        "u",
+        "y",
+        "|",
+        "}",
+        "\u007f",
+        "\u0081",
+        "\u0082",
+        "\u0084"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.20588235294117646,
+        "f1": 0.34146341463414637
+      }
+    },
+    {
+      "protein_id": "Q8SWT8",
+      "predicted_terms": [
+        "B",
+        "I",
+        "K"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "E",
+        "H",
+        "I",
+        "K",
+        "M",
+        "N",
+        "R",
+        "T"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3,
+        "f1": 0.4615384615384615
+      }
+    },
+    {
+      "protein_id": "Q4GY64",
+      "predicted_terms": [
+        "H"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "E",
+        "H"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    },
+    {
+      "protein_id": "Q62066",
+      "predicted_terms": [
+        "A",
+        "D",
+        "E",
+        "J",
+        "K",
+        "a",
+        "c",
+        "f",
+        "i"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "E",
+        "J",
+        "K",
+        "Y",
+        "[",
+        "^",
+        "a",
+        "c",
+        "f",
+        "g",
+        "i",
+        "s",
+        "|"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999
+      }
+    },
+    {
+      "protein_id": "Q66JM6",
+      "predicted_terms": [
+        "c"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "J",
+        "N",
+        "O",
+        "Q",
+        "R",
+        "S",
+        "U",
+        "W",
+        "Y",
+        "[",
+        "_",
+        "a",
+        "b",
+        "c"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.05263157894736842,
+        "f1": 0.1
+      }
+    },
+    {
+      "protein_id": "Q8R3P7",
+      "predicted_terms": [
+        "B"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "D"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q8K3P1",
+      "predicted_terms": [
+        "C",
+        "D",
+        "E",
+        "M",
+        "P",
+        "W",
+        "Z",
+        "h",
+        "n",
+        "p",
+        "v",
+        "r",
+        "a",
+        "b",
+        "m",
+        "[",
+        "c"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "E",
+        "M",
+        "P",
+        "W",
+        "Z",
+        "[",
+        "a",
+        "b",
+        "c",
+        "h",
+        "l",
+        "m",
+        "n",
+        "p",
+        "r",
+        "v"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.9444444444444444,
+        "f1": 0.9714285714285714
+      }
+    },
+    {
+      "protein_id": "Q9Y7N4",
+      "predicted_terms": [
+        "F",
+        "H",
+        "L"
+      ],
+      "actual_terms": [
+        "F",
+        "H",
+        "I",
+        "J",
+        "L",
+        "M",
+        "N"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "P59583",
+      "predicted_terms": [
+        "G",
+        "L"
+      ],
+      "actual_terms": [
+        "G",
+        "J",
+        "L"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q9PFJ6",
+      "predicted_terms": [
+        "B",
+        "G",
+        "K"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "G",
+        "I",
+        "K",
+        "L"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      }
+    },
+    {
+      "protein_id": "Q98950",
+      "predicted_terms": [
+        "I"
+      ],
+      "actual_terms": [
+        "C",
+        "G",
+        "I"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q9JKY0",
+      "predicted_terms": [
+        "B",
+        "C"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "E"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q86W47",
+      "predicted_terms": [
+        "h"
+      ],
+      "actual_terms": [
+        "C",
+        "E",
+        "O",
+        "R",
+        "S",
+        "W",
+        "X",
+        "\\",
+        "`",
+        "a",
+        "b",
+        "d",
+        "g",
+        "h",
+        "n",
+        "r",
+        "x",
+        "y",
+        "{",
+        "|",
+        "}"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.047619047619047616,
+        "f1": 0.0909090909090909
+      }
+    },
+    {
+      "protein_id": "O70276",
+      "predicted_terms": [
+        "",
+        "C",
+        "F",
+        "O",
+        "Q",
+        "R",
+        "V"
+      ],
+      "actual_terms": [
+        "C",
+        "F",
+        "O",
+        "Q",
+        "R",
+        "V"
+      ],
+      "metrics": {
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "f1": 0.923076923076923
+      }
+    },
+    {
+      "protein_id": "Q16K62",
+      "predicted_terms": [
+        "D",
+        "D"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "I"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "A0A1D8PS27",
+      "predicted_terms": [
+        "A",
+        "I",
+        "T",
+        "X"
+      ],
+      "actual_terms": [
+        "A",
+        "I",
+        "L",
+        "N",
+        "O",
+        "T",
+        "U",
+        "X"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      }
+    },
+    {
+      "protein_id": "P38174",
+      "predicted_terms": [
+        "B",
+        "C",
+        "J",
+        "N",
+        "Q",
+        "R",
+        "U",
+        "V",
+        "Z"
+      ],
+      "actual_terms": [
+        "B",
+        "C",
+        "I",
+        "J",
+        "N",
+        "Q",
+        "R",
+        "U",
+        "V",
+        "Z"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1": 0.9473684210526316
+      }
+    },
+    {
+      "protein_id": "F7FG85",
+      "predicted_terms": [
+        "B",
+        "K",
+        "d",
+        "[",
+        "\\",
+        "L",
+        "W"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "D",
+        "J",
+        "K",
+        "L",
+        "T",
+        "W",
+        "[",
+        "\\",
+        "c",
+        "d"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.5833333333333334,
+        "f1": 0.7368421052631579
+      }
+    },
+    {
+      "protein_id": "L0DSL2",
+      "predicted_terms": [
+        "B",
+        "G",
+        "N",
+        "Z",
+        "]"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "G",
+        "I",
+        "N",
+        "O",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Z",
+        "]",
+        "^"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3125,
+        "f1": 0.47619047619047616
+      }
+    },
+    {
+      "protein_id": "Q91AU0",
+      "predicted_terms": [
+        "B",
+        "H"
+      ],
+      "actual_terms": [
+        "B",
+        "G",
+        "H"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "Q561K3",
+      "predicted_terms": [
+        "D",
+        "G",
+        "N"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "D",
+        "F",
+        "G",
+        "M",
+        "N"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "Q99459",
+      "predicted_terms": [
+        "G",
+        "M",
+        "Z",
+        "b",
+        "W",
+        "g"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "G",
+        "I",
+        "J",
+        "K",
+        "M",
+        "Q",
+        "T",
+        "W",
+        "X",
+        "Z",
+        "\\",
+        "^",
+        "_",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "i"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.2727272727272727,
+        "f1": 0.42857142857142855
+      }
+    },
+    {
+      "protein_id": "Q97P97",
+      "predicted_terms": [
+        "H"
+      ],
+      "actual_terms": [
+        "B",
+        "H",
+        "J"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q960R6",
+      "predicted_terms": [
+        "A",
+        "B",
+        "D"
+      ],
+      "actual_terms": [
+        "A",
+        "B",
+        "D",
+        "G",
+        "K",
+        "R",
+        "U"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.42857142857142855,
+        "f1": 0.6
+      }
+    },
+    {
+      "protein_id": "Q16401",
+      "predicted_terms": [
+        "B",
+        "E"
+      ],
+      "actual_terms": [
+        "B",
+        "D",
+        "E"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "C5IAU5",
+      "predicted_terms": [
+        "D"
+      ],
+      "actual_terms": [
+        "A",
+        "D",
+        "F"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      }
+    },
+    {
+      "protein_id": "Q9V4L4",
+      "predicted_terms": [
+        "A",
+        "F"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "F"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      }
+    },
+    {
+      "protein_id": "P30014",
+      "predicted_terms": [
+        "D",
+        "E"
+      ],
+      "actual_terms": [
+        "C",
+        "D",
+        "E",
+        "K",
+        "M",
+        "R",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+        "["
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.14285714285714285,
+        "f1": 0.25
+      }
+    },
+    {
+      "protein_id": "Q9Y4B5",
+      "predicted_terms": [
+        "C",
+        "I",
+        "O",
+        "R"
+      ],
+      "actual_terms": [
+        "A",
+        "C",
+        "E",
+        "F",
+        "I",
+        "K",
+        "N",
+        "O",
+        "R",
+        "S"
+      ],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      }
+    }
+  ],
+  "average_metrics": {
+    "precision": 0.9309668989547037,
+    "recall": 0.410757275968101,
+    "f1": 0.5315859479292147
+  }
+}
