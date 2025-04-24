@@ -976,9 +976,9 @@ training_args = GRPOConfig(
     optim="paged_adamw_8bit",
     logging_steps=1,
     bf16=True,
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=1,
-    num_generations=2,
+    per_device_train_batch_size=3,
+    gradient_accumulation_steps=4,
+    num_generations=3,
     max_prompt_length=MAX_INPUT_LENGTH,
     max_completion_length=MAX_OUTPUT_LENGTH,
     num_train_epochs=NUM_EPOCHS,
@@ -995,8 +995,8 @@ trainer = GRPOTrainer(
     train_dataset=train_dataset,
     callbacks=[WandBLoggingCallback(),CheckpointCallback(
         checkpoint_dir=f"./{RUN_NAME}/checkpoints",
-        checkpoint_freq=1, 
-        max_checkpoints=1     # Keep last 5 checkpoints
+        checkpoint_freq=15, 
+        max_checkpoints=5     # Keep last 5 checkpoints
     )]
 )
 
