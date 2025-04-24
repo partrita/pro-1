@@ -122,96 +122,6 @@ def load_go_structure(go_structure_path):
         print(f"Error loading GO structure: {e}")
         return {}
 
-def load_protein_annotations(train_terms_path: str) -> Dict[str, Dict[str, Dict[str, Set[str]]]]:
-    """
-    Load protein GO term annotations from tsv file, separating experimental and predicted annotations by aspect.
-    
-    Args:
-        train_terms_path (str): Path to the TSV file containing protein annotations
-        
-    Returns:
-        Dict with structure:
-        {
-            'MFO/BPO/CCO': {
-                'experimental': {protein_id: set(terms)},
-                'predicted': {protein_id: set(terms)}
-            }
-        }
-    """
-    try:
-        protein_annotations = {
-            'MFO': {'experimental': {}, 'predicted': {}},
-            'BPO': {'experimental': {}, 'predicted': {}},
-            'CCO': {'experimental': {}, 'predicted': {}}
-        }
-        
-        with open(train_terms_path, 'r') as f:
-            reader = csv.reader(f, delimiter='\t')
-            header = next(reader)  # Skip header row
-            
-            # Verify expected columns exist
-            expected_cols = ['protein_id', 'term_id', 'aspect']
-            if len(header) < len(expected_cols):
-                raise ValueError(f"Missing columns in annotation file. Expected: {expected_cols}")
-            
-            for row in reader:
-                if len(row) < 3:
-                    print(f"Warning: Skipping malformed row: {row}")
-                    continue
-                    
-                protein_id, term_id, aspect = row[:3]
-                protein_id = protein_id.strip()
-                term_id = term_id.strip()
-                aspect = aspect.strip()
-                
-                # Skip if aspect is not one of the main three
-                if aspect not in protein_annotations:
-                    continue
-                
-                # Determine if evidence is experimental
-                annotation_type = 'experimental'
-                
-                # Initialize sets if needed
-                if protein_id not in protein_annotations[aspect][annotation_type]:
-                    protein_annotations[aspect][annotation_type][protein_id] = set()
-                
-                # Add the term
-                protein_annotations[aspect][annotation_type][protein_id].add(term_id)
-        
-        return protein_annotations
-        
-    except Exception as e:
-        print(f"Error loading protein annotations: {e}")
-        return {
-            'MFO': {'experimental': {}, 'predicted': {}},
-            'BPO': {'experimental': {}, 'predicted': {}},
-            'CCO': {'experimental': {}, 'predicted': {}}
-        }
-
-def load_protein_sequences(train_sequences_path):
-    """Load protein sequences from FASTA file"""
-    try:
-        protein_sequences = {}
-        for record in SeqIO.parse(train_sequences_path, "fasta"):
-            # Extract UniProt ID from the header
-            header = record.description  # Use description instead of id to get full header
-            # Try different patterns to extract UniProt ID
-            if 'sp|' in header:
-                uniprot_id = header.split('sp|')[1].split('|')[0]
-            elif 'tr|' in header:
-                uniprot_id = header.split('tr|')[1].split('|')[0]
-            else:
-                uniprot_id = header.split()[0]  # Fall back to first word
-                
-            protein_sequences[uniprot_id] = str(record.seq)
-        
-        print(f"Loaded sequences for {len(protein_sequences)} proteins")
-        return protein_sequences
-    except Exception as e:
-        print(f"Error loading protein sequences: {e}")
-        print(f"Error details: header={header if 'header' in locals() else 'N/A'}")
-        return {}
-
 def get_plausible_distractors(true_terms: Set[str], go_terms: Dict, aspect: str) -> List[str]:
     """
     Select plausible but incorrect GO terms as distractors for multiple choice.
@@ -250,6 +160,107 @@ def get_plausible_distractors(true_terms: Set[str], go_terms: Dict, aspect: str)
     distractors = random.sample(list(potential_distractors), min(num_distractors, len(potential_distractors)))
     return distractors
 
+def load_protein_annotations(train_terms_path: str) -> Dict[str, Dict[str, Dict[str, Set[str]]]]:
+    """
+    Load protein GO term annotations from tsv file, separating experimental and predicted annotations by aspect.
+    
+    Args:
+        train_terms_path (str): Path to the TSV file containing protein annotations
+        
+    Returns:
+        Dict with structure:
+        {
+            'MFO/BPO/CCO': {
+                'experimental': {protein_id: set(terms)},
+                'predicted': {protein_id: set(terms)}
+            }
+        }
+    """
+    try:
+        protein_annotations = {
+            'MFO': {'experimental': {}},
+            'BPO': {'experimental': {}},
+            'CCO': {'experimental': {}}
+        }
+        
+        with open(train_terms_path, 'r') as f:
+            reader = csv.reader(f, delimiter='\t')
+            header = next(reader)  # Skip header row
+            
+            # Verify expected columns exist
+            expected_cols = ['protein_id', 'term_id', 'aspect']
+            if len(header) < len(expected_cols):
+                raise ValueError(f"Missing columns in annotation file. Expected: {expected_cols}")
+            
+            for row in reader:
+                if len(row) < 3:
+                    print(f"Warning: Skipping malformed row: {row}")
+                    continue
+                    
+                protein_id, term_id, aspect = row[:3]
+                protein_id = protein_id.strip()
+                term_id = term_id.strip()
+                aspect = aspect.strip()
+                
+                # Skip if aspect is not one of the main three
+                if aspect not in protein_annotations:
+                    continue
+                
+                # Initialize sets if needed
+                if protein_id not in protein_annotations[aspect]['experimental']:
+                    protein_annotations[aspect]['experimental'][protein_id] = set()
+                
+                # Add the term
+                protein_annotations[aspect]['experimental'][protein_id].add(term_id)
+        
+        return protein_annotations
+        
+    except Exception as e:
+        print(f"Error loading protein annotations: {e}")
+        return {
+            'MFO': {'experimental': {}},
+            'BPO': {'experimental': {}},
+            'CCO': {'experimental': {}}
+        }
+
+def load_protein_sequences(train_sequences_path):
+    """Load protein sequences from FASTA file"""
+    try:
+        protein_sequences = {}
+        for record in SeqIO.parse(train_sequences_path, "fasta"):
+            # Extract UniProt ID from the header
+            header = record.description  # Use description instead of id to get full header
+            # Try different patterns to extract UniProt ID
+            if 'sp|' in header:
+                uniprot_id = header.split('sp|')[1].split('|')[0]
+            elif 'tr|' in header:
+                uniprot_id = header.split('tr|')[1].split('|')[0]
+            else:
+                uniprot_id = header.split()[0]  # Fall back to first word
+                
+            protein_sequences[uniprot_id] = str(record.seq)
+        
+        print(f"Loaded sequences for {len(protein_sequences)} proteins")
+        return protein_sequences
+    except Exception as e:
+        print(f"Error loading protein sequences: {e}")
+        print(f"Error details: header={header if 'header' in locals() else 'N/A'}")
+        return {}
+
+def format_terms(terms: Set[str], aspect_name: str, go_terms: Dict) -> str:
+    """Format GO terms for display in prompt"""
+    if not terms:
+        return f"  No experimentally validated {aspect_name} terms known"
+    formatted = []
+    for term_id in sorted(terms):
+        term_info = go_terms.get(term_id, {})
+        name = term_info.get('name', 'Unknown term')
+        definition = term_info.get('def', '').split('"')[1] if 'def' in term_info and '"' in term_info.get('def', '') else ''
+        formatted.append(f"  - {term_id}: {name}")
+        if definition:
+            formatted.append(f"    Definition: {definition}")
+    return "\n".join(formatted)
+
 def construct_prompt(
     protein_id: str,
     sequence: str,
@@ -263,32 +274,19 @@ def construct_prompt(
     # Get protein description and format known annotations (keeping existing code)
     protein_description = f"Protein ID: {protein_id}"
     
-    # Format known annotations for each aspect (keeping existing code)
-    def format_terms(terms: Set[str], aspect_name: str) -> str:
-        if not terms:
-            return f"  No experimentally validated {aspect_name} terms known"
-        formatted = []
-        for term_id in sorted(terms):
-            term_info = go_terms.get(term_id, {})
-            name = term_info.get('name', 'Unknown term')
-            definition = term_info.get('def', '').split('"')[1] if 'def' in term_info else ''
-            formatted.append(f"  - {term_id}: {name}")
-            if definition:
-                formatted.append(f"    Definition: {definition}")
-        return "\n".join(formatted)
-    
-    # Get experimental annotations for non-target aspects (keeping existing code)
+    # Format known annotations for each aspect
+    # Get experimental annotations for non-target aspects
     other_aspects = [asp for asp in ['MFO', 'BPO', 'CCO'] if asp != target_aspect]
     aspect_annotations = {}
     for aspect in other_aspects:
         terms = protein_annotations.get(aspect, {}).get('experimental', {}).get(protein_id, set())
-        aspect_annotations[aspect] = format_terms(terms, aspect)
+        aspect_annotations[aspect] = format_terms(terms, aspect, go_terms)
     
     # Get true terms for the target aspect
     true_terms = protein_annotations.get(target_aspect, {}).get('experimental', {}).get(protein_id, set())
     
     # Get distractor terms
-    distractors = get_plausible_distractors(true_terms, go_terms, target_aspect, num_distractors=3*len(true_terms))
+    distractors = get_plausible_distractors(true_terms, go_terms, target_aspect)
     
     # Combine true terms and distractors, shuffle them
     all_choices = list(true_terms) + distractors
@@ -463,6 +461,25 @@ def extract_go_terms_from_response(response):
         print(f"Error extracting GO terms: {e}")
         return []
 
+def evaluate_predictions(predicted: List[str], actual: List[str]) -> Dict[str, float]:
+    """Calculate precision, recall, and F1 score for predictions."""
+    predicted_set = set(predicted)
+    actual_set = set(actual)
+    
+    tp = len(predicted_set.intersection(actual_set))
+    fp = len(predicted_set - actual_set)
+    fn = len(actual_set - predicted_set)
+    
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1": f1
+    }
+
 def calculate_weighted_fmeasure(
     predicted_terms: Set[str],
     true_terms: Set[str],
@@ -537,18 +554,15 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
                 true_terms = set(aspect_term_list)
                 
                 # Calculate reward based on F1 score
-                num_correct = len(predicted_terms & true_terms)  # intersection of sets
                 print('--------------------------------')
                 print('completion: ', completion)
                 print('PREDICTED TERMS: ', predicted_terms)
                 print('TRUE TERMS: ', true_terms)
                 
-                # Calculate precision and recall
-                precision = num_correct / len(predicted_terms) if len(predicted_terms) > 0 else 0.0
-                recall = num_correct / len(true_terms) if len(true_terms) > 0 else 0.0
+                # Calculate metrics using the evaluate_predictions function
+                metrics = evaluate_predictions(list(predicted_terms), list(true_terms))
+                f1 = metrics["f1"]
                 
-                # Calculate F1 score
-                f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
                 print('F1 SCORE: ', f1)
                 reward = f1 * GO_PREDICTION_REWARD
                 
@@ -562,6 +576,9 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
                         f"reward/completion_{i}/total_reward": reward,
                         f"reward/completion_{i}/predicted_terms_count": len(predicted_terms),
                         f"reward/completion_{i}/true_terms_count": len(true_terms),
+                        f"reward/completion_{i}/precision": metrics["precision"],
+                        f"reward/completion_{i}/recall": metrics["recall"],
+                        f"reward/completion_{i}/f1": metrics["f1"],
                         f"reward/completion_{i}/thinking_length": thinking_length,
                         f"reward/completion_{i}/aspect": aspect,
                         f"reward/completion_{i}/correct": predicted_terms == true_terms
@@ -696,9 +713,9 @@ class CheckpointCallback(TrainerCallback):
     def on_step_end(self, args, state, control, **kwargs):
         """Save checkpoint every checkpoint_freq steps"""
         if state.global_step % self.checkpoint_freq == 0:
-            self._save_checkpoint(args, state)
+            self._save_checkpoint(args, state, **kwargs)
             
-    def _save_checkpoint(self, args, state):
+    def _save_checkpoint(self, args, state, **kwargs):
         """Save LoRA checkpoint and maintain max number of checkpoints"""
         proc_state = PartialState()
         if not proc_state.is_main_process:
@@ -710,31 +727,54 @@ class CheckpointCallback(TrainerCallback):
         checkpoint_path = self.checkpoint_dir / checkpoint_name
         
         try:
-            # Save LoRA weights and config
-            state.model.save_pretrained(checkpoint_path)  # This saves LoRA weights
+            # Create checkpoint directory
+            checkpoint_path.mkdir(parents=True, exist_ok=True)
+            global tokenizer
             
-            # Save additional training state
-            training_state = {
-                "global_step": state.global_step,
-                "epoch": state.epoch,
-                "best_metric": state.best_metric,
-                "training_args": args.to_dict(),
-            }
-            torch.save(training_state, checkpoint_path / "trainer_state.pt")
+            # First try to get model from kwargs
+            checkpoint_model = kwargs.get('model')
+            checkpoint_tokenizer = None
             
-            # Save tokenizer
-            tokenizer.save_pretrained(checkpoint_path)
+            # If model not in kwargs, try global variable
+            if checkpoint_model is None:
+                global model
+                checkpoint_model = model
+                checkpoint_tokenizer = tokenizer
+                print("Using global model reference for checkpointing")
+            else:
+                print("Using model from kwargs for checkpointing")
             
-            # Maintain only max_checkpoints number of checkpoints
-            checkpoints = sorted(self.checkpoint_dir.glob("checkpoint-*"))
-            if len(checkpoints) > self.max_checkpoints:
-                for checkpoint in checkpoints[:-self.max_checkpoints]:
-                    shutil.rmtree(checkpoint)
+            if checkpoint_model is not None:
+                # For PEFT models, save_pretrained saves the adapter weights
+                checkpoint_model.save_pretrained(checkpoint_path)
+                
+                # Save additional training state
+                training_state = {
+                    "global_step": state.global_step,
+                    "epoch": state.epoch,
+                    "best_metric": getattr(state, "best_metric", None),
+                }
+                torch.save(training_state, checkpoint_path / "trainer_state.pt")
+                
+                checkpoint_tokenizer = tokenizer
+                
+                # Save tokenizer if available
+                if checkpoint_tokenizer is not None:
+                    checkpoint_tokenizer.save_pretrained(checkpoint_path)
+                
+                # Maintain only max_checkpoints number of checkpoints
+                checkpoints = sorted(self.checkpoint_dir.glob("checkpoint-*"))
+                if len(checkpoints) > self.max_checkpoints:
+                    for checkpoint in checkpoints[:-self.max_checkpoints]:
+                        shutil.rmtree(checkpoint)
                     
-            print(f"Saved LoRA checkpoint: {checkpoint_path}")
-            
+                print(f"Saved LoRA checkpoint: {checkpoint_path}")
+            else:
+                print("Warning: No model available for checkpointing")
         except Exception as e:
             print(f"Error saving checkpoint: {e}")
+            import traceback
+            traceback.print_exc()
 
 def load_from_checkpoint(checkpoint_path, model, trainer):
     """Load LoRA weights and training state from checkpoint"""
@@ -936,9 +976,9 @@ training_args = GRPOConfig(
     optim="paged_adamw_8bit",
     logging_steps=1,
     bf16=True,
-    per_device_train_batch_size=3,
-    gradient_accumulation_steps=4,
-    num_generations=3,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=1,
+    num_generations=2,
     max_prompt_length=MAX_INPUT_LENGTH,
     max_completion_length=MAX_OUTPUT_LENGTH,
     num_train_epochs=NUM_EPOCHS,
@@ -955,8 +995,8 @@ trainer = GRPOTrainer(
     train_dataset=train_dataset,
     callbacks=[WandBLoggingCallback(),CheckpointCallback(
         checkpoint_dir=f"./{RUN_NAME}/checkpoints",
-        checkpoint_freq=8, 
-        max_checkpoints=5     # Keep last 5 checkpoints
+        checkpoint_freq=1, 
+        max_checkpoints=1     # Keep last 5 checkpoints
     )]
 )
 
