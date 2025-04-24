@@ -212,31 +212,42 @@ def load_protein_sequences(train_sequences_path):
         print(f"Error details: header={header if 'header' in locals() else 'N/A'}")
         return {}
 
-def get_plausible_distractors(true_terms: Set[str], go_terms: Dict, aspect: str, num_distractors: int = 4) -> List[str]:
+def get_plausible_distractors(true_terms: Set[str], go_terms: Dict, aspect: str) -> List[str]:
     """
     Select plausible but incorrect GO terms as distractors for multiple choice.
+    Number of distractors will be 1-3x the number of true terms.
     
     Args:
         true_terms: Set of correct GO terms
         go_terms: Dictionary of all GO terms and their information
         aspect: The GO aspect (MFO, BPO, CCO)
-        num_distractors: Number of distractor terms to select
     
     Returns:
         List of distractor GO terms
     """
+    # Map aspect codes to namespaces
+    aspect_to_namespace = {
+        'MFO': 'molecular_function',
+        'BPO': 'biological_process', 
+        'CCO': 'cellular_component'
+    }
+    namespace = aspect_to_namespace[aspect]
+    
     # Filter GO terms by aspect
     aspect_terms = {
-        term_id: term_info for term_id, term_info in go_terms.items()
-        if term_info.get('namespace', '').upper() == aspect
+        term_id for term_id, term_info in go_terms.items()
+        if term_info.get('namespace', '').lower() == namespace
     }
     
     # Remove true terms from potential distractors
-    potential_distractors = set(aspect_terms.keys()) - true_terms
+    potential_distractors = aspect_terms - true_terms
     
-    # Select distractors randomly (could be made smarter by using embedding similarity)
+    # Randomly choose multiplier between 1 and 3
+    multiplier = random.randint(1, 3)
+    num_distractors = len(true_terms) * multiplier
+    
+    # Select distractors randomly
     distractors = random.sample(list(potential_distractors), min(num_distractors, len(potential_distractors)))
-    
     return distractors
 
 def construct_prompt(
@@ -341,7 +352,15 @@ First, think through your reasoning process considering:
 You are a helpful assistant that helps users with protein function prediction. You first think about the reasoning process and then provide the answer. The reasoning process and answer should be enclosed within <think> </think> and <answer> </answer> tags respectively. Your thinking should be at least 3000 words. |eot_id|><|start_header_id|>user<|end_header_id|>
 {go_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
 
-    return whole_prompt, {chr(65+i): term_id for i, term_id in enumerate(all_choices)}
+    def get_option_label(index):
+        if index < 26:
+            return chr(65 + index)
+        else:
+            first_char = chr(65 + (index // 26 - 1))
+            second_char = chr(65 + (index % 26))
+            return f"{first_char}{second_char}"
+    
+    return whole_prompt, {get_option_label(i): term_id for i, term_id in enumerate(all_choices)}
 
 def create_dataset(
     protein_sequences: Dict[str, str],
@@ -517,15 +536,21 @@ def go_prediction_reward_func(prompts, completions, aspect_terms=None, aspects=N
                 predicted_terms = {options[opt] for opt in selected_options if opt in options}
                 true_terms = set(aspect_term_list)
                 
-                # Calculate reward based on percentage of correct terms
+                # Calculate reward based on F1 score
                 num_correct = len(predicted_terms & true_terms)  # intersection of sets
                 print('--------------------------------')
                 print('completion: ', completion)
                 print('PREDICTED TERMS: ', predicted_terms)
                 print('TRUE TERMS: ', true_terms)
-                num_total = max(len(predicted_terms), len(true_terms))
-                print('PERCENT CORRECT: ', num_correct / num_total)
-                reward = (num_correct / num_total) * GO_PREDICTION_REWARD if num_total > 0 else 0.0
+                
+                # Calculate precision and recall
+                precision = num_correct / len(predicted_terms) if len(predicted_terms) > 0 else 0.0
+                recall = num_correct / len(true_terms) if len(true_terms) > 0 else 0.0
+                
+                # Calculate F1 score
+                f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+                print('F1 SCORE: ', f1)
+                reward = f1 * GO_PREDICTION_REWARD
                 
                 # Add formatting reward
                 reward += FORMATTED_OUTPUT_REWARD
