@@ -211,7 +211,7 @@ Remember to format your response with:
     try:
         # Create response using Together API
         response = client.chat.completions.create(
-            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
             messages=[
                 {"role": "user", "content": full_prompt}
             ],
@@ -239,45 +239,53 @@ def create_reasoning_dataset(
     proteins_with_sequences = set(protein_sequences.keys())
     print(f"Found {len(proteins_with_sequences)} proteins with sequences")
     
-    # Create examples for each aspect
-    for aspect in ['MFO', 'BPO', 'CCO']:
-        if len(dataset_records) >= max_examples:
-            continue
+    try:
+        # Create examples for each aspect
+        for aspect in ['MFO', 'BPO', 'CCO']:
+                        
+            # Get proteins with experimental annotations
+            proteins_with_exp = set(protein_annotations[aspect]['experimental'].keys())
+            proteins_with_exp = proteins_with_exp & proteins_with_sequences
             
-        # Get proteins with experimental annotations
-        proteins_with_exp = set(protein_annotations[aspect]['experimental'].keys())
-        proteins_with_exp = proteins_with_exp & proteins_with_sequences
-        
-        print(f"\n{aspect}:")
-        print(f"  Proteins with experimental annotations: {len(proteins_with_exp)}")
-        
-        # Create records for proteins with experimental annotations
-        for i in tqdm(range(max_examples), desc=f"Generating {aspect} reasoning"):
-            protein_id = list(proteins_with_exp)[i]
-            if len(dataset_records) >= max_examples:
-                break
+            print(f"\n{aspect}:")
+            print(f"  Proteins with experimental annotations: {len(proteins_with_exp)}")
+            
+            # Create records for proteins with experimental annotations
+            for i in tqdm(range(max_examples), desc=f"Generating {aspect} reasoning"):
+                    
+                protein_id = list(proteins_with_exp)[i]
                 
-            # Get GO terms for this protein in this aspect
-            true_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
-            
-            # Generate reasoning
-            reasoning = generate_reasoning(
-                protein_id,
-                protein_sequences[protein_id],
-                true_terms,
-                protein_annotations,
-                go_terms,
-                target_aspect=aspect
-            )
-            
-            record = {
-                "protein_id": protein_id,
-                "aspect": aspect,
-                "sequence": protein_sequences[protein_id],
-                "true_terms": list(true_terms),
-                "reasoning": reasoning
-            }
-            dataset_records.append(record)
+                # Get GO terms for this protein in this aspect
+                true_terms = protein_annotations[aspect]['experimental'].get(protein_id, set())
+                
+                # Generate reasoning
+                reasoning = generate_reasoning(
+                    protein_id,
+                    protein_sequences[protein_id],
+                    true_terms,
+                    protein_annotations,
+                    go_terms,
+                    target_aspect=aspect
+                )
+                
+                record = {
+                    "protein_id": protein_id,
+                    "aspect": aspect,
+                    "sequence": protein_sequences[protein_id],
+                    "true_terms": list(true_terms),
+                    "reasoning": reasoning
+                }
+                dataset_records.append(record)
+
+    except KeyboardInterrupt:
+        print("\nProcess interrupted! Saving partial results...")
+        # Save partial results
+        output_dir = Path("data")
+        output_dir.mkdir(exist_ok=True)
+        with open(output_dir / "go_reasoning_partial.json", "w") as f:
+            json.dump({"records": dataset_records}, f, indent=2)
+        print(f"Saved {len(dataset_records)} records to data/go_reasoning_partial.json")
+        return dataset_records
     
     print(f"\nCreated {len(dataset_records)} total dataset records")
     return dataset_records
@@ -287,7 +295,7 @@ if __name__ == "__main__":
     TRAIN_SEQUENCES_PATH = "function/cafa/Train/train_sequences.fasta"
     TRAIN_TERMS_PATH = "function/cafa/Train/train_terms.tsv"
     GO_STRUCTURE_PATH = "function/cafa/Train/go-basic.obo"
-    MAX_EXAMPLES = 40000  # Adjust as needed
+    MAX_EXAMPLES = 2000  # Adjust as needed
     
     # Load data
     print("Loading GO structure...")
