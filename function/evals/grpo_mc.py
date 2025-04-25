@@ -29,7 +29,7 @@ from pathlib import Path
 # Total False Positives: 602
 # Total False Negatives: 774
 
-# SFT x2 Evaluation Results:
+# SFT Evaluation Results:
 # Average Precision: 0.2960
 # Average Recall: 0.4280
 # Average F1: 0.3051
@@ -126,10 +126,11 @@ def run_evaluation_local(model_name: str, checkpoint_path: str, dataset_path: st
     
     for example in tqdm(dataset, desc="Evaluating"):
         # Extract system and user parts from the prompt
-        prompt_parts = example['prompt'].split('|eot_id|>')
-        system_message = prompt_parts[0].replace('<|start_header_id|>system<|end_header_id|>', '').strip()
-        user_message = prompt_parts[1].split('<|eot_id|>')[0].replace('<|start_header_id|>user<|end_header_id|>', '').strip()
         try:
+            prompt_parts = example['prompt'].split('|eot_id|>')
+            system_message = prompt_parts[0].replace('<|start_header_id|>system<|end_header_id|>', '').strip()
+            user_message = prompt_parts[1].split('<|eot_id|>')[0].replace('<|start_header_id|>user<|end_header_id|>', '').strip()
+            
             # Get model response using local model
             inputs = tokenizer(user_message, return_tensors="pt").to(model.device)
             
@@ -157,10 +158,17 @@ def run_evaluation_local(model_name: str, checkpoint_path: str, dataset_path: st
             predicted_terms = parse_response(response_text)
             actual_terms = example.get('ground_truth_terms', [])
             
+            # Extract aspect from prompt if available or default to 'MFO'
+            aspect = 'MFO'  # Default to MFO for multiple choice examples
+            for line in user_message.split('\n'):
+                if line.strip().startswith('Target Aspect:'):
+                    aspect = line.split(':')[1].strip()
+                    break
+            
             metrics = evaluate_predictions(predicted_terms, actual_terms)
             results.append({
                 "protein_id": example['protein_id'],
-                "aspect": example['aspect'],
+                "aspect": aspect,
                 "predicted_terms": predicted_terms,
                 "actual_terms": actual_terms,
                 "metrics": metrics
@@ -173,7 +181,7 @@ def run_evaluation_local(model_name: str, checkpoint_path: str, dataset_path: st
                 total_metrics[metric] += metrics[metric]
                 
         except Exception as e:
-            print(f"Error processing example {example['protein_id']}: {str(e)}")
+            print(f"Error processing example {example.get('protein_id', 'unknown')}: {str(e)}")
             continue
     
     # Calculate averages for ratio metrics
@@ -302,9 +310,9 @@ def run_evaluation_base_model(model_name: str, dataset_path: str, output_path: s
 if __name__ == "__main__":
     # Configuration
     BASE_MODEL = "unsloth/meta-Llama-3.1-8B-Instruct"
-    CHECKPOINT_PATH = "/root/pro-1/function-sft-checkpoint-1125/function-sft-checkpoint-1125"
-    DATASET_PATH = "non_mc_eval_dataset/dataset.jsonl"  # Update with your actual dataset path
-    OUTPUT_PATH = "results/sft_eval_results.json"
+    CHECKPOINT_PATH = "/root/pro-1/cafa_functional_go_prediction/checkpoints/func-grpo-checkpoint-20250424-150507-step45"
+    DATASET_PATH = "eval_dataset/dataset.jsonl"  # Update with your actual dataset path
+    OUTPUT_PATH = "results/mc_grpo_eval_results.json"
     
     # Run evaluation
     run_evaluation_local(BASE_MODEL, CHECKPOINT_PATH, DATASET_PATH, OUTPUT_PATH)
