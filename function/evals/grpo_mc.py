@@ -12,30 +12,18 @@ import torch
 from unsloth import FastLanguageModel
 from pathlib import Path
 
-# Non MC 
-# GRPO Evaluation Results:
-# Average Precision: 0.1553
-# Average Recall: 0.1931
-# Average F1: 0.1370
-# Total True Positives: 100
-# Total False Positives: 696
-# Total False Negatives: 778
+# MC GRPO
+# Evaluation Results:
+# Average Precision: 0.4293
+# Average Recall: 0.4116
+# Average F1: 0.3870
+# Total True Positives: 290
+# Total False Positives: 366
+# Total False Negatives: 636
 
-# Base Model Evaluation Results:
-# Average Precision: 0.1723
-# Average Recall: 0.1859
-# Average F1: 0.1507
-# Total True Positives: 104
-# Total False Positives: 602
-# Total False Negatives: 774
+# MC SFT Only 
 
-# SFT Evaluation Results:
-# Average Precision: 0.2960
-# Average Recall: 0.4280
-# Average F1: 0.3051
-# Total True Positives: 260
-# Total False Positives: 668
-# Total False Negatives: 618
+# Base Model
 
 load_dotenv()
 
@@ -153,10 +141,10 @@ def run_evaluation_local(model_name: str, checkpoint_path: str, dataset_path: st
                 response_text = response_text.split('<|assistant|>')[1].strip()
             
             print(f"Response for {example['protein_id']}:")
-            print(response_text[:200] + "..." if len(response_text) > 200 else response_text)
+            print(response_text[:2000] + "..." if len(response_text) > 2000 else response_text)
             
             predicted_terms = parse_response(response_text)
-            actual_terms = example.get('ground_truth_terms', [])
+            actual_terms = example.get('correct_choices', [])
             
             # Extract aspect from prompt if available or default to 'MFO'
             aspect = 'MFO'  # Default to MFO for multiple choice examples
@@ -235,10 +223,11 @@ def run_evaluation_base_model(model_name: str, dataset_path: str, output_path: s
     
     for example in tqdm(dataset, desc="Evaluating Base Model"):
         # Extract system and user parts from the prompt
-        prompt_parts = example['prompt'].split('|eot_id|>')
-        system_message = prompt_parts[0].replace('<|start_header_id|>system<|end_header_id|>', '').strip()
-        user_message = prompt_parts[1].split('<|eot_id|>')[0].replace('<|start_header_id|>user<|end_header_id|>', '').strip()
         try:
+            prompt_parts = example['prompt'].split('|eot_id|>')
+            system_message = prompt_parts[0].replace('<|start_header_id|>system<|end_header_id|>', '').strip()
+            user_message = prompt_parts[1].split('<|eot_id|>')[0].replace('<|start_header_id|>user<|end_header_id|>', '').strip()
+            
             # Get model response using base model
             inputs = tokenizer(user_message, return_tensors="pt").to(model.device)
             
@@ -261,15 +250,22 @@ def run_evaluation_base_model(model_name: str, dataset_path: str, output_path: s
                 response_text = response_text.split('<|assistant|>')[1].strip()
             
             print(f"Base Model Response for {example['protein_id']}:")
-            print(response_text[:200] + "..." if len(response_text) > 200 else response_text)
+            print(response_text[:2000] + "..." if len(response_text) > 2000 else response_text)
             
             predicted_terms = parse_response(response_text)
-            actual_terms = example.get('ground_truth_terms', [])
+            actual_terms = example.get('correct_choices', [])
+            
+            # Extract aspect from prompt if available or default to 'MFO'
+            aspect = 'MFO'  # Default to MFO for multiple choice examples
+            for line in user_message.split('\n'):
+                if line.strip().startswith('Target Aspect:'):
+                    aspect = line.split(':')[1].strip()
+                    break
             
             metrics = evaluate_predictions(predicted_terms, actual_terms)
             results.append({
                 "protein_id": example['protein_id'],
-                "aspect": example['aspect'],
+                "aspect": aspect,
                 "predicted_terms": predicted_terms,
                 "actual_terms": actual_terms,
                 "metrics": metrics
@@ -282,7 +278,7 @@ def run_evaluation_base_model(model_name: str, dataset_path: str, output_path: s
                 total_metrics[metric] += metrics[metric]
                 
         except Exception as e:
-            print(f"Error processing example {example['protein_id']}: {str(e)}")
+            print(f"Error processing example {example.get('protein_id', 'unknown')}: {str(e)}")
             continue
     
     # Calculate averages for ratio metrics
@@ -310,12 +306,12 @@ def run_evaluation_base_model(model_name: str, dataset_path: str, output_path: s
 if __name__ == "__main__":
     # Configuration
     BASE_MODEL = "unsloth/meta-Llama-3.1-8B-Instruct"
-    CHECKPOINT_PATH = "/root/pro-1/cafa_functional_go_prediction/checkpoints/func-grpo-checkpoint-20250424-150507-step45"
+    CHECKPOINT_PATH = "function-sft-checkpoint-1125/function-sft-checkpoint-1125"
     DATASET_PATH = "eval_dataset/dataset.jsonl"  # Update with your actual dataset path
-    OUTPUT_PATH = "results/mc_grpo_eval_results.json"
+    OUTPUT_PATH = "results/mc_base_eval_results.json"
     
     # Run evaluation
-    run_evaluation_local(BASE_MODEL, CHECKPOINT_PATH, DATASET_PATH, OUTPUT_PATH)
+    # run_evaluation_local(BASE_MODEL, CHECKPOINT_PATH, DATASET_PATH, OUTPUT_PATH)
 
     # # Run evaluation on base model (without adapter)
-    # run_evaluation_base_model(BASE_MODEL, DATASET_PATH, OUTPUT_PATH)
+    run_evaluation_base_model(BASE_MODEL, DATASET_PATH, OUTPUT_PATH)

@@ -10,6 +10,9 @@ import faiss
 import pickle
 import os
 from tqdm import tqdm
+from huggingface_hub import login
+from esm.models.esm3 import ESM3
+from esm.sdk.api import ESM3InferenceClient, ESMProtein, LogitsConfig, GenerationConfig
 
 class StructureSimilaritySearch:
     def __init__(self, train_sequences_path: str, train_terms_path: str, cache_dir: str = "cache"):
@@ -26,10 +29,18 @@ class StructureSimilaritySearch:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # Load ESM-3 model for structure prediction
-        self.model, self.alphabet = esm.pretrained.esm2_t36_3B_UR50D()
-        self.model = self.model.eval().cuda()
-        self.batch_converter = self.alphabet.get_batch_converter()
+        # Load ESM3 model for protein embedding
+        try:
+            # Try to load ESM3-open model
+            self.model = ESM3.from_pretrained("esm3-open").to("cuda")
+        except Exception as e:
+            print(f"Error loading ESM3 from HuggingFace: {e}")
+            # Fallback to ESMC open model if available
+            try:
+                from esm.pretrained import ESMC_300M_202412
+                self.model = ESMC_300M_202412().to("cuda")
+            except:
+                raise Exception("Could not load any ESM3 or ESMC model. Make sure to install and configure the esm package correctly.")
         
         # Initialize FAISS index for similarity search
         self.index = None
@@ -64,26 +75,36 @@ class StructureSimilaritySearch:
     
     def generate_structure_embedding(self, sequence: str) -> np.ndarray:
         """
-        Generate structure embedding for a protein sequence using ESM-3.
+        Generate structure-specific embedding for a protein sequence using ESM3's structure track.
         
         Args:
             sequence: Protein sequence as string
             
         Returns:
-            numpy.ndarray: Structure embedding
-        """
-        # Prepare input
-        data = [("protein", sequence)]
-        batch_labels, batch_strs, batch_tokens = self.batch_converter(data)
+            numpy.ndarray: Structure-specific embedding
+        """ 
+        # Create ESMProtein object from sequence
+        protein = ESMProtein(sequence=sequence)
         
-        # Generate embedding
-        with torch.no_grad():
-            results = self.model(batch_tokens.cuda(), repr_layers=[36])
-            token_representations = results["representations"][36]
+        # Generate the structure if it doesn't exist
+        if protein.coordinates is None:
+            # This will predict the structure for the sequence
+            protein = self.model.generate(protein, 
+                                         GenerationConfig(track="structure", 
+                                                         num_steps=8))
         
-        # Average pool over sequence length
-        sequence_embedding = token_representations.mean(dim=1)
-        return sequence_embedding.cpu().numpy()
+        # Now encode the protein WITH the generated structure
+        protein_tensor = self.model.encode(protein)
+        print(protein_tensor.shape)
+        
+        # Get structure-specific embeddings
+        structure_output = self.model.logits(
+            protein_tensor,
+            LogitsConfig(structure=True, return_embeddings=True)
+        )
+        print(structure_output.embeddings.shape)
+        # Return the structure-specific embeddings
+        return structure_output.embeddings.numpy()
     
     def build_index(self, force_rebuild: bool = False):
         """
@@ -109,6 +130,9 @@ class StructureSimilaritySearch:
         # Generate embeddings for all training sequences
         for protein_id, sequence in tqdm(self.train_sequences.items()):
             embedding = self.generate_structure_embedding(sequence)
+            # Handle different embedding shapes (ensuring we have a 1D or 2D array)
+            if embedding.ndim > 2:
+                embedding = embedding.reshape(1, -1)
             embeddings.append(embedding)
             self.protein_ids.append(protein_id)
             
@@ -142,6 +166,12 @@ class StructureSimilaritySearch:
         """
         # Generate embedding for query sequence
         query_embedding = self.generate_structure_embedding(query_sequence)
+        
+        # Ensure the embedding is in the right shape for FAISS
+        if query_embedding.ndim > 2:
+            query_embedding = query_embedding.reshape(1, -1)
+        elif query_embedding.ndim == 1:
+            query_embedding = query_embedding.reshape(1, -1)
         
         # Search in FAISS index
         distances, indices = self.index.search(query_embedding, k)
