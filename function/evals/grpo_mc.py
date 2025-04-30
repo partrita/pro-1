@@ -22,8 +22,22 @@ from pathlib import Path
 # Total False Negatives: 636
 
 # MC SFT Only 
+# Evaluation Results:
+# Average Precision: 0.2612
+# Average Recall: 0.4345
+# Average F1: 0.2823
+# Total True Positives: 339
+# Total False Positives: 961
+# Total False Negatives: 587
 
 # Base Model
+# Base Model Evaluation Results:
+# Average Precision: 0.4331
+# Average Recall: 0.3818
+# Average F1: 0.3734
+# Total True Positives: 265
+# Total False Positives: 340
+# Total False Negatives: 661
 
 load_dotenv()
 
