@@ -6,13 +6,15 @@ from Bio import SeqIO
 from typing import Dict, List, Tuple, Optional
 import numpy as np
 from pathlib import Path
-import faiss
 import pickle
 import os
 from tqdm import tqdm
 from huggingface_hub import login
 from esm.models.esm3 import ESM3
 from esm.sdk.api import ESM3InferenceClient, ESMProtein, LogitsConfig, GenerationConfig
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class StructureSimilaritySearch:
     def __init__(self, train_sequences_path: str, train_terms_path: str, cache_dir: str = "cache"):
@@ -32,6 +34,11 @@ class StructureSimilaritySearch:
         # Load ESM3 model for protein embedding
         try:
             # Try to load ESM3-open model
+            huggingface_token = os.getenv('HUGGINGFACE_API_KEY')
+            if not huggingface_token:
+                raise ValueError("HUGGINGFACE_API_KEY not found in environment variables")
+            login(token=huggingface_token)
+            print("Successfully logged into Hugging Face")
             self.model = ESM3.from_pretrained("esm3-open").to("cuda")
         except Exception as e:
             print(f"Error loading ESM3 from HuggingFace: {e}")
@@ -42,8 +49,8 @@ class StructureSimilaritySearch:
             except:
                 raise Exception("Could not load any ESM3 or ESMC model. Make sure to install and configure the esm package correctly.")
         
-        # Initialize FAISS index for similarity search
-        self.index = None
+        # Initialize embedding storage
+        self.embeddings = None
         self.protein_ids = []
         self.go_terms = {}
         
@@ -94,62 +101,132 @@ class StructureSimilaritySearch:
                                                          num_steps=8))
         
         # Now encode the protein WITH the generated structure
-        protein_tensor = self.model.encode(protein)
-        print(protein_tensor.shape)
+        protein_tensor = self.model.encode(protein)        
         
         # Get structure-specific embeddings
         structure_output = self.model.logits(
             protein_tensor,
             LogitsConfig(structure=True, return_embeddings=True)
         )
-        print(structure_output.embeddings.shape)
         # Return the structure-specific embeddings
-        return structure_output.embeddings.numpy()
+        return structure_output.embeddings.cpu().numpy()
     
-    def build_index(self, force_rebuild: bool = False):
+    def generate_structure_embeddings_batch(self, sequences: List[str], batch_size: int = 4) -> List[np.ndarray]:
         """
-        Build FAISS index for fast similarity search.
+        Generate structure-specific embeddings for multiple protein sequences in batches.
         
         Args:
-            force_rebuild: If True, rebuild index even if cache exists
+            sequences: List of protein sequences as strings
+            batch_size: Number of sequences to process in each batch
+            
+        Returns:
+            List of numpy.ndarray: Structure-specific embeddings for each sequence
         """
-        cache_file = self.cache_dir / "structure_index.pkl"
+        all_embeddings = []
+        
+        # Process sequences in batches
+        for i in range(0, len(sequences), batch_size):
+            batch_sequences = sequences[i:i+batch_size]
+            batch_proteins = []
+            
+            # Create ESMProtein objects for each sequence in the batch
+            for sequence in batch_sequences:
+                protein = ESMProtein(sequence=sequence)
+                batch_proteins.append(protein)
+            
+            # Generate structures for all proteins in the batch that don't have coordinates
+            batch_proteins_with_structure = []
+            for protein in batch_proteins:
+                if protein.coordinates is None:
+                    protein = self.model.generate(protein,
+                                                 GenerationConfig(track="structure",
+                                                                 num_steps=8))
+                batch_proteins_with_structure.append(protein)
+            
+            # Process the batch with a simple loop, avoiding potential memory issues
+            batch_embeddings = []
+            for protein in batch_proteins_with_structure:
+                # Encode the protein with the structure
+                protein_tensor = self.model.encode(protein)
+                
+                # Get structure-specific embeddings
+                structure_output = self.model.logits(
+                    protein_tensor,
+                    LogitsConfig(structure=True, return_embeddings=True)
+                )
+                
+                # Add to batch embeddings
+                batch_embeddings.append(structure_output.embeddings.cpu().numpy())
+            
+            # Add all batch embeddings to the results
+            all_embeddings.extend(batch_embeddings)
+            
+            print(f"Processed batch {i//batch_size + 1}/{(len(sequences) + batch_size - 1)//batch_size}")
+            
+        return all_embeddings
+    
+    def build_index(self, force_rebuild: bool = False, batch_size: int = 4):
+        """
+        Build embeddings matrix for similarity search.
+        
+        Args:
+            force_rebuild: If True, rebuild embeddings even if cache exists
+            batch_size: Number of sequences to process in each batch
+        """
+        cache_file = self.cache_dir / "structure_embeddings.pkl"
         
         if not force_rebuild and cache_file.exists():
-            print("Loading cached index...")
+            print("Loading cached embeddings...")
             with open(cache_file, 'rb') as f:
                 cached_data = pickle.load(f)
-                self.index = cached_data['index']
+                self.embeddings = cached_data['embeddings']
                 self.protein_ids = cached_data['protein_ids']
             return
         
-        print("Building structure similarity index...")
-        embeddings = []
-        self.protein_ids = []
+        print("Building structure similarity embeddings...")
+        self.protein_ids = list(self.train_sequences.keys())
+        sequences = [self.train_sequences[pid] for pid in self.protein_ids]
         
-        # Generate embeddings for all training sequences
-        for protein_id, sequence in tqdm(self.train_sequences.items()):
-            embedding = self.generate_structure_embedding(sequence)
-            # Handle different embedding shapes (ensuring we have a 1D or 2D array)
+        # Process embeddings in batches
+        print(f"Processing {len(sequences)} sequences in batches of {batch_size}")
+        embeddings_list = self.generate_structure_embeddings_batch(sequences, batch_size)
+        
+        # Handle different embedding shapes (ensuring we have a 1D or 2D array)
+        processed_embeddings = []
+        for embedding in embeddings_list:
             if embedding.ndim > 2:
                 embedding = embedding.reshape(1, -1)
-            embeddings.append(embedding)
-            self.protein_ids.append(protein_id)
+            processed_embeddings.append(embedding)
             
         # Convert to numpy array
-        embeddings = np.vstack(embeddings)
+        self.embeddings = np.vstack(processed_embeddings)
         
-        # Build FAISS index
-        dimension = embeddings.shape[1]
-        self.index = faiss.IndexFlatL2(dimension)
-        self.index.add(embeddings)
-        
-        # Cache the index
+        # Cache the embeddings
         with open(cache_file, 'wb') as f:
             pickle.dump({
-                'index': self.index,
+                'embeddings': self.embeddings,
                 'protein_ids': self.protein_ids
             }, f)
+    
+    def compute_similarity(self, query_embedding, database_embeddings):
+        """
+        Compute similarity scores between query and database embeddings.
+        Uses Euclidean distance to match the behavior of the previous FAISS implementation.
+        
+        Args:
+            query_embedding: Query embedding
+            database_embeddings: Database embeddings
+            
+        Returns:
+            Distances and indices of nearest neighbors
+        """
+        # Compute squared Euclidean distances
+        distances = np.sum((database_embeddings - query_embedding) ** 2, axis=1)
+        
+        # Get indices sorted by distance (ascending)
+        indices = np.argsort(distances)
+        
+        return distances, indices
     
     def find_similar_structures(self, 
                               query_sequence: str, 
@@ -167,21 +244,25 @@ class StructureSimilaritySearch:
         # Generate embedding for query sequence
         query_embedding = self.generate_structure_embedding(query_sequence)
         
-        # Ensure the embedding is in the right shape for FAISS
+        # Ensure the embedding is in the right shape
         if query_embedding.ndim > 2:
             query_embedding = query_embedding.reshape(1, -1)
         elif query_embedding.ndim == 1:
             query_embedding = query_embedding.reshape(1, -1)
         
-        # Search in FAISS index
-        distances, indices = self.index.search(query_embedding, k)
+        # Search in embeddings matrix
+        distances, indices = self.compute_similarity(query_embedding, self.embeddings)
+        
+        # Get top k results
+        top_indices = indices[:k]
         
         # Get results
         results = []
-        for i, idx in enumerate(indices[0]):
+        for idx in top_indices:
             protein_id = self.protein_ids[idx]
             go_terms = self.train_terms[protein_id]
-            similarity_score = 1.0 / (1.0 + distances[0][i])  # Convert distance to similarity
+            distance = distances[idx]
+            similarity_score = 1.0 / (1.0 + distance)  # Convert distance to similarity
             results.append((protein_id, go_terms, similarity_score))
             
         return results
@@ -193,8 +274,8 @@ def main():
         train_terms_path="function/cafa/Train/train_terms.tsv"
     )
     
-    # Build index (only needed once)
-    searcher.build_index()
+    # Build embeddings matrix (only needed once)
+    searcher.build_index(batch_size=4)  # Adjust batch size based on available GPU memory
     
     # Example query sequence
     query_sequence = "MSLLTEVETPIRNEWECRCSGLPEWLQAEPMQTRGLFGAIAGFIENGWEGMVDGWYGFRHQNSEGRGQAADLKSTQAAIDQINGKLNRLIGKTNEKFHQIEKEFSEVEGRIQDLEKYVEDTKIDLWSYNAELLVALENQHTIDLTDSEMNKLFEKTKKQLRENAEDMGNGCFKIYHKCDNACIGSIRNGTYDHDVYRDEALNNRFQIKGVELKSGYKDWILWISFAISCFLLCVALLGFIMWACQKGNIRCNICI"
