@@ -110,7 +110,7 @@ def run_evaluation(model_name: str, dataset_path: str, output_path: str):
 if __name__ == "__main__":
     # Initialize OpenAI client with API key
     load_dotenv()
-    client = openai.OpenAI(api_key='')
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     # Configuration
     MODEL_NAME = "gpt-4o-mini-2024-07-18"  # or your preferred model

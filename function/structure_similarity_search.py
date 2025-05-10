@@ -152,7 +152,6 @@ class StructureSimilaritySearch:
         
         # Print information about the embedding
         print("Sequence start:", sequence[:20])
-        print("First few elements:", global_embedding[:5])
         
         return global_embedding
     
@@ -373,16 +372,19 @@ class StructureSimilaritySearch:
         Returns:
             Similarity scores and indices of nearest neighbors
         """
+
+        print(f"Query embedding shape: {query_embedding.shape}")
+        print(f"Query embedding: {query_embedding}")
         # Compute cosine similarity (dot product of normalized vectors)
         similarities = np.dot(database_embeddings, query_embedding)
         
         # Get indices sorted by similarity (descending)
         indices = np.argsort(similarities)[::-1]
 
-        print("Database shape:", database_embeddings.shape)
-        print("First database element norm:", np.linalg.norm(database_embeddings[0]))
-        print("Query shape:", query_embedding.shape)
-        print("Similarity range:", similarities.min(), "to", similarities.max())
+        # print("Database shape:", database_embeddings.shape)
+        # print("First database element norm:", np.linalg.norm(database_embeddings[0]))
+        # print("Query shape:", query_embedding.shape)
+        # print("Similarity range:", similarities.min(), "to", similarities.max())
         
         return similarities, indices
     
@@ -391,6 +393,7 @@ class StructureSimilaritySearch:
                               k: int = 5) -> List[Tuple[str, Dict[str, set], float]]:
         """
         Find proteins with similar structures and their GO terms.
+        Filters out sequences with >90% raw sequence similarity.
         
         Args:
             query_sequence: Query protein sequence
@@ -402,24 +405,54 @@ class StructureSimilaritySearch:
         # Generate normalized embedding for query sequence
         query_embedding = self.generate_structure_embedding(query_sequence)
         
-        # Ensure we don't request more similarities than we have proteins
-        k = min(k, len(self.protein_ids))
-        
         # Search in embeddings matrix - gets cosine similarities
         similarities, indices = self.compute_similarity(query_embedding, self.embeddings)
         
-        # Get top k results
-        top_indices = indices[:k]
-        
-        # Get results
+        # Filter results based on raw sequence similarity
         results = []
-        for idx in top_indices:
+        for idx in indices:
             protein_id = self.protein_ids[idx]
-            go_terms = self.train_terms.get(protein_id, {'MFO': set(), 'BPO': set(), 'CCO': set()})
-            similarity = float(similarities[idx])  # This is the cosine similarity (should be between -1 and 1)
-            results.append((protein_id, go_terms, similarity))
+            candidate_seq = self.sequences_db[idx]
             
-        return results
+            # Calculate max raw sequence similarity by trying different alignments
+            max_similarity = 0
+            query_len = len(query_sequence)
+            cand_len = len(candidate_seq)
+            
+            # Try different starting positions in both sequences
+            for q_start in range(query_len):
+                for c_start in range(cand_len):
+                    # Get overlapping region length
+                    overlap_len = min(query_len - q_start, cand_len - c_start)
+                    if overlap_len < 20:  # Skip if overlap too small
+                        continue
+                        
+                    # Count matches in overlapping region
+                    matches = sum(q == c for q, c in zip(
+                        query_sequence[q_start:q_start+overlap_len],
+                        candidate_seq[c_start:c_start+overlap_len]
+                    ))
+                    similarity = (matches / overlap_len) * 100
+                    max_similarity = max(max_similarity, similarity)
+                    
+                    if max_similarity > 90:  # Early exit if we find high similarity
+                        break
+                if max_similarity > 90:
+                    break
+            
+            # Skip if max similarity is too high
+            if max_similarity > 90:
+                continue
+                
+            go_terms = self.train_terms.get(protein_id, {'MFO': set(), 'BPO': set(), 'CCO': set()})
+            similarity = float(similarities[idx])
+            results.append((protein_id, go_terms, similarity, max_similarity))
+            
+            # Break if we have enough results
+            if len(results) >= k:
+                break
+        
+        return results[:k]  # Return at most k results
 
 def main():
     # Example usage
