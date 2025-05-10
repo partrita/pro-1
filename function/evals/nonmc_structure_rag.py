@@ -11,10 +11,25 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from structure_similarity_search import StructureSimilaritySearch
 
-# Evaluation Results:
-# Average Precision: 0.9461
-# Average Recall: 0.6174
-# Average F1: 0.7233
+
+# Average: 0.384619
+
+# Evaluation (no terms) Results:
+# Average Precision: 0.2084
+# Average Recall: 0.1768
+# Average F1: 0.1709
+# Total True Positives: 105
+# Total False Positives: 383
+# Total False Negatives: 773
+
+# Evaluation Results, sequence only:
+# Average Precision: 0.2008
+# Average Recall: 0.1640
+# Average F1: 0.1662
+# Total True Positives: 97
+# Total False Positives: 310
+# Total False Negatives: 781
+
 
 def parse_response(response: str) -> List[str]:
     """
@@ -75,9 +90,19 @@ def format_similar_structures_prompt(similar_structures) -> str:
     
     for protein_id, go_terms, similarity, seq_sim in similar_structures:
         prompt_parts.append(f"\nProtein {protein_id} (Structural Similarity: {similarity:.3f}, Sequence Similarity: {seq_sim:.3f})")
-        # for aspect, terms in go_terms.items():
-        #     if terms:  # Only include aspects that have terms
-        #         prompt_parts.append(f"{aspect}: {', '.join(terms)}")
+        # Get sequence from FASTA file
+        sequence = ""
+        with open("function/cafa/Train/train_sequences.fasta", "r") as f:
+            current_id = ""
+            for line in f:
+                if line.startswith(">"):
+                    current_id = line[1:].strip()
+                    if current_id == protein_id:
+                        next_line = next(f, "").strip()
+                        sequence = next_line
+                        break
+        if sequence:
+            prompt_parts.append(f"Sequence: {sequence}")
     
     return "\n".join(prompt_parts)
 
@@ -355,5 +380,5 @@ if __name__ == "__main__":
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     MODEL_NAME = "gpt-4o-mini-2024-07-18"  # or your preferred OpenAI model
     DATASET_PATH = "non_mc_eval_dataset/dataset.jsonl"
-    OUTPUT_PATH = "eval_results/non_mc_gpt4o-mini_with_rag.json"
+    OUTPUT_PATH = "eval_results/non_mc_gpt4o-mini_with_rag_no_terms.json"
     run_evaluation_openai_with_rag(MODEL_NAME, DATASET_PATH, OUTPUT_PATH, client) 
