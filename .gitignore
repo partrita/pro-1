@@ -1,4 +1,5 @@
 venv
+*.pdb
 __pycache__
 model_cache
 data/brenda_2023_1.json
