@@ -1,4 +1,5 @@
 # Pro-1
+[한국어](./README_ko.md)
 
 [![GitHub](https://img.shields.io/badge/GitHub-michaelhla/pro--1-181717?logo=github)](https://github.com/michaelhla/pro-1)
 [![Twitter](https://img.shields.io/badge/Twitter-@hla__michael-1DA1F2?logo=twitter&style=social)](https://twitter.com/hla_michael)
